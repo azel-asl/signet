@@ -1,0 +1,256 @@
+{
+  "receipt_version": "signet-receipt-v1",
+  "receipt_id": "rcpt_phi-transfer-001_20260616T040950Z",
+  "parent_receipt_id": null,
+  "packet": {
+    "id": "phi-transfer-001",
+    "sha256": "6f1d717f131043ab57f6fddf05ff1f602be4a3b0d2abbf538bdac83147489a7d",
+    "tier": 3,
+    "type": "deploy"
+  },
+  "action": "governed_execution",
+  "verdict": "blocked",
+  "outcome": "failed",
+  "summary": {
+    "tasks_total": 7,
+    "tasks_complete": 7,
+    "tasks_blocked": 0,
+    "tasks_skipped": 0,
+    "tasks_failed": 0,
+    "blocks_recorded": 0,
+    "gates_passed": 2,
+    "gates_failed": 1,
+    "gates_unevaluated": 0,
+    "ats_passed": 0,
+    "ats_failed": 1,
+    "ats_unevaluated": 2
+  },
+  "task_results": [
+    {
+      "task_id": "TASK_001",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_001",
+        "kind": "read",
+        "targets": [],
+        "description": "Read input/study-clinic-a.dcm and confirm de-identification markers are present",
+        "source": "extracted"
+      },
+      "evidence_type": "file_read",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "Study read; de-identification confirmed; no raw identifiers present."
+    },
+    {
+      "task_id": "TASK_002",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_002",
+        "kind": "execute",
+        "targets": [
+          "tokenize-metadata.sh",
+          "tokens.json"
+        ],
+        "description": "Run scripts/tokenize-metadata.sh — write tokens to output/transfer-logs/tokens.json",
+        "source": "extracted"
+      },
+      "evidence_type": "command_output",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "output/transfer-logs/tokens.json written; contains only tokenized metadata."
+    },
+    {
+      "task_id": "TASK_003",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_003",
+        "kind": "assert",
+        "targets": [],
+        "description": "Verify token integrity — confirm no raw patient identifiers remain in the tokenized payload",
+        "source": "extracted"
+      },
+      "evidence_type": "gate_check",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "Token integrity passes; zero raw identifiers detected."
+    },
+    {
+      "task_id": "TASK_004",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_004",
+        "kind": "execute",
+        "targets": [],
+        "description": "Transmit tokenized study to Hospital B endpoint (only after GATE_002 approval); retry at most twice then escalate",
+        "source": "extracted"
+      },
+      "evidence_type": "command_output",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "Tokenized study transmitted; endpoint accepted the payload."
+    },
+    {
+      "task_id": "TASK_005",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_005",
+        "kind": "execute",
+        "targets": [
+          "verify-delivery.sh"
+        ],
+        "description": "Verify delivery via scripts/verify-delivery.sh — write output/transfer-logs/delivery.log",
+        "source": "extracted"
+      },
+      "evidence_type": "command_output",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "Delivery confirmed by Hospital B; delivery.log written."
+    },
+    {
+      "task_id": "TASK_006",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_006",
+        "kind": "assert",
+        "targets": [],
+        "description": "Scan delivery response for raw PHI leakage — confirm response contains no patient identifiers",
+        "source": "extracted"
+      },
+      "evidence_type": "gate_check",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "Leakage scan passes; zero raw identifiers in the response."
+    },
+    {
+      "task_id": "TASK_007",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_007",
+        "kind": "write",
+        "targets": [
+          "report.md"
+        ],
+        "description": "Write audit report to output/transfer-logs/report.md",
+        "source": "extracted"
+      },
+      "evidence_type": "file_write",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "output/transfer-logs/report.md written with transfer summary and verification results."
+    }
+  ],
+  "block_events": [],
+  "gate_results": [
+    {
+      "gate_id": "GATE_001",
+      "condition": "TASK_001, TASK_002, TASK_003 all COMPLETE before TASK_004 begins",
+      "result": "PASS",
+      "method": "dependency_order",
+      "on_fail": "HALT",
+      "halted_run": false
+    },
+    {
+      "gate_id": "GATE_002",
+      "condition": "Human reviewer approves transmission of the tokenized study to Hospital B",
+      "result": "FAIL",
+      "method": "approval_record",
+      "on_fail": "HALT",
+      "halted_run": true
+    },
+    {
+      "gate_id": "GATE_003",
+      "condition": "TASK_006 leakage scan passes before TASK_007 begins",
+      "result": "PASS",
+      "method": "dependency_order",
+      "on_fail": "HALT",
+      "halted_run": false
+    }
+  ],
+  "behavioral_reports": [
+    {
+      "lock_id": "LOCK_002",
+      "rule": "Only tokenized metadata may be transmitted to Hospital B",
+      "paired_with": [
+        "AT_001"
+      ],
+      "verified_by": "unevaluated",
+      "result": "UNEVALUATED"
+    },
+    {
+      "lock_id": "LOCK_003",
+      "rule": "Do not transmit before GATE_002 human approval",
+      "paired_with": [
+        "GATE_002"
+      ],
+      "verified_by": "gate",
+      "result": "FAIL"
+    },
+    {
+      "lock_id": "LOCK_004",
+      "rule": "All outputs must be written to output/transfer-logs/ only",
+      "paired_with": [
+        "AT_002"
+      ],
+      "verified_by": "acceptance_test",
+      "result": "FAIL"
+    }
+  ],
+  "acceptance_results": [
+    {
+      "at_id": "AT_001",
+      "name": "Tokenized payload only",
+      "result": "UNEVALUATED",
+      "method": "unevaluated",
+      "detail": "No mechanical checker applies in v0.1"
+    },
+    {
+      "at_id": "AT_002",
+      "name": "Output scope containment",
+      "result": "FAIL",
+      "method": "scope_containment",
+      "detail": "Escapes: TASK_007: report.md"
+    },
+    {
+      "at_id": "AT_003",
+      "name": "No leakage in delivery response",
+      "result": "UNEVALUATED",
+      "method": "unevaluated",
+      "detail": "No mechanical checker applies in v0.1"
+    }
+  ],
+  "ledger_crosscheck": {
+    "declared": {
+      "required_task_count": 7,
+      "required_gate_count": 3,
+      "required_lock_count": 4,
+      "required_acceptance_test_count": 3,
+      "required_receipt_count": 1,
+      "ledger_status": "PENDING"
+    },
+    "observed": {
+      "task_count": 7,
+      "gate_count": 3,
+      "lock_count": 4,
+      "acceptance_test_count": 3,
+      "receipt_count": 1
+    },
+    "matches": true
+  },
+  "timestamps": {
+    "started_at": "2026-06-16T04:09:50.108Z",
+    "finished_at": "2026-06-16T04:09:50.109Z"
+  },
+  "canon": "XAS-CANON-1",
+  "hashes": {
+    "sha256": "4db366f15dedb8363592c67db1d229bed302a68875f38d3dfca027560da6b45a",
+    "h10": "4f8953d1d7a87d4af5ab40cee0c3e8af44d7c70c0c9bafda3a8a82416289d105"
+  },
+  "signature": null
+}

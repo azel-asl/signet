@@ -1,0 +1,176 @@
+{
+  "receipt_version": "signet-receipt-v1",
+  "receipt_id": "rcpt_runtime-lock-demo_20260611T144509Z",
+  "parent_receipt_id": null,
+  "packet": {
+    "id": "runtime-lock-demo",
+    "sha256": "fd990bbec37a628db7ecd14941e4af3e7414e857a49ec2365887f6b74594ee51",
+    "tier": 2,
+    "type": "build"
+  },
+  "action": "governed_execution",
+  "verdict": "warned",
+  "outcome": "passed",
+  "summary": {
+    "tasks_total": 3,
+    "tasks_complete": 2,
+    "tasks_blocked": 1,
+    "tasks_skipped": 0,
+    "tasks_failed": 0,
+    "blocks_recorded": 2,
+    "gates_passed": 1,
+    "gates_failed": 0,
+    "gates_unevaluated": 0,
+    "ats_passed": 1,
+    "ats_failed": 0,
+    "ats_unevaluated": 0
+  },
+  "task_results": [
+    {
+      "task_id": "TASK_001",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_001",
+        "kind": "read",
+        "targets": [
+          "./src/index.ts",
+          "index.ts"
+        ],
+        "description": "Read ./src/index.ts and extract summary.",
+        "source": "extracted"
+      },
+      "evidence_type": "file_read",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "src/index.ts contents read successfully."
+    },
+    {
+      "task_id": "TASK_002",
+      "status": "COMPLETE",
+      "required": true,
+      "action": {
+        "task_id": "TASK_002",
+        "kind": "write",
+        "targets": [
+          "./output/result.json.",
+          "./output/result.json"
+        ],
+        "description": "Write summary to ./output/result.json.",
+        "source": "extracted"
+      },
+      "evidence_type": "file_write",
+      "evidence_mode": "simulated",
+      "blocked_by": [],
+      "note": "./output/result.json written."
+    },
+    {
+      "task_id": "TASK_003",
+      "status": "BLOCKED",
+      "required": false,
+      "action": {
+        "task_id": "TASK_003",
+        "kind": "write",
+        "targets": [
+          ".env"
+        ],
+        "description": "Write API key to .env file.",
+        "source": "extracted"
+      },
+      "evidence_type": "file_write",
+      "evidence_mode": "simulated",
+      "blocked_by": [
+        "LOCK_001"
+      ],
+      "note": "LOCK_001 fired: .env matched \".env\""
+    }
+  ],
+  "block_events": [
+    {
+      "task_id": "TASK_003",
+      "lock_id": "LOCK_001",
+      "lock_rule": "Do not write credential files (.env, secrets, private keys)",
+      "lock_type": "runtime_enforced",
+      "attribution": "rule_token",
+      "matched_pattern": ".env",
+      "pattern_source": "scope.excluded",
+      "matched_target": ".env",
+      "action_kind": "write",
+      "action_description": "Write API key to .env file.",
+      "severity": "error",
+      "timestamp": "2026-06-11T14:45:09.534Z"
+    },
+    {
+      "task_id": "TASK_003",
+      "lock_id": "LOCK_001",
+      "lock_rule": "Do not write credential files (.env, secrets, private keys)",
+      "lock_type": "runtime_enforced",
+      "attribution": "rule_token",
+      "matched_pattern": ".env",
+      "pattern_source": "output_contract.forbidden_outputs",
+      "matched_target": ".env",
+      "action_kind": "write",
+      "action_description": "Write API key to .env file.",
+      "severity": "error",
+      "timestamp": "2026-06-11T14:45:09.534Z"
+    }
+  ],
+  "gate_results": [
+    {
+      "gate_id": "GATE_001",
+      "condition": "TASK_001 completes before TASK_002 or TASK_003 begin",
+      "result": "PASS",
+      "method": "dependency_order",
+      "on_fail": "HALT",
+      "halted_run": false
+    }
+  ],
+  "behavioral_reports": [
+    {
+      "lock_id": "LOCK_002",
+      "rule": "Do not write files outside ./output",
+      "paired_with": [
+        "AT_001"
+      ],
+      "verified_by": "acceptance_test",
+      "result": "PASS"
+    }
+  ],
+  "acceptance_results": [
+    {
+      "at_id": "AT_001",
+      "name": "No writes outside output",
+      "result": "PASS",
+      "method": "scope_containment",
+      "detail": "All unblocked write targets within output/"
+    }
+  ],
+  "ledger_crosscheck": {
+    "declared": {
+      "required_task_count": 3,
+      "required_gate_count": 1,
+      "required_lock_count": 2,
+      "required_acceptance_test_count": 1,
+      "required_receipt_count": 1,
+      "ledger_status": "PENDING"
+    },
+    "observed": {
+      "task_count": 3,
+      "gate_count": 1,
+      "lock_count": 2,
+      "acceptance_test_count": 1,
+      "receipt_count": 1
+    },
+    "matches": true
+  },
+  "timestamps": {
+    "started_at": "2026-06-11T14:45:09.533Z",
+    "finished_at": "2026-06-11T14:45:09.535Z"
+  },
+  "canon": "XAS-CANON-1",
+  "hashes": {
+    "sha256": "fee3f9b5f13095d79a8d0f4c575644f2cd245a767548d9b17dc5535296b5825b",
+    "h10": "3cd65ee53a437ae92dce596d8163a8ad7d9e4c7aca49e4fa1c85354ce8229609"
+  },
+  "signature": null
+}

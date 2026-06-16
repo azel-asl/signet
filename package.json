@@ -1,0 +1,63 @@
+{
+  "name": "@azel-asl/signet",
+  "version": "0.3.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "description": "Open specification, validator, governed runtime (simulation), and receipt verifier for AI agent work. Signet Packets define scope, tasks, locks, gates, evidence, and receipts so AI agents can operate under a written contract.",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "bin": {
+    "signet": "dist/cli/signet.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./canon": {
+      "import": "./dist/src/canon.js",
+      "types": "./dist/src/canon.d.ts"
+    },
+    "./runtime": {
+      "import": "./dist/src/runtime.js",
+      "types": "./dist/src/runtime.d.ts"
+    },
+    "./verify": {
+      "import": "./dist/src/verify.js",
+      "types": "./dist/src/verify.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx cli/signet.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "signet": "tsx cli/signet.ts",
+    "validate": "tsx cli/signet.ts validate",
+    "run": "tsx cli/signet.ts run",
+    "verify": "tsx cli/signet.ts verify"
+  },
+  "keywords": [
+    "governance",
+    "AI",
+    "agent",
+    "specification",
+    "validator",
+    "receipts",
+    "audit"
+  ],
+  "author": "Erwin Layaoen (ASL Labs)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/azel-asl/signet.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.21",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}

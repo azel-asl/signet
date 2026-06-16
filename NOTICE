@@ -1,0 +1,34 @@
+Signet — Governance by contract, enforcement by hook, verification by receipt
+Copyright 2026 Erwin Layaoen
+
+This product includes software developed by ASL Labs
+(Agentic Specification Language Labs).
+Website: https://github.com/azel-asl/signet
+
+---
+
+## Attribution Requirements
+
+When using Signet under the Apache 2.0 License:
+
+1. **You must include** a copy of the LICENSE file with your distribution
+2. **You must include** a copy of this NOTICE file (or mention it)
+3. **You do NOT need to** include Erwin Layaoen's name in your code unless:
+   - You are bundling Signet inside your product (then include LICENSE + NOTICE)
+   - You are modifying Signet code (then add a note that you modified Erwin's work)
+
+### Examples
+
+**Using Signet as a dependency:** Just include LICENSE + NOTICE in your repo's root or documentation.
+
+**Modifying Signet:** Add a notice like:
+```
+This file contains modifications to work originally created by Erwin Layaoen.
+Original: https://github.com/azel-asl/signet
+```
+
+**Bundling Signet:** Include LICENSE + NOTICE in your distribution.
+
+---
+
+For more details, see: http://www.apache.org/licenses/LICENSE-2.0

@@ -1,0 +1,47 @@
+{
+  "$comment": "Machine-readable summary of Signet governance + receipt checks. Source of truth is src/validator.ts, src/governance.ts, src/verify.ts via the CLI.",
+  "governance_checks": [
+    {
+      "id": "honest_enforcement",
+      "rule": "A lock enforced_by agent_receipt is attestation, not runtime enforcement",
+      "on_violation": "FAIL"
+    },
+    {
+      "id": "behavioral_lock_paired",
+      "rule": "type=behavioral lock must have paired_with referencing a GATE or AT",
+      "on_violation": "FAIL"
+    },
+    {
+      "id": "human_gate_approval_id",
+      "rule": "GATE with evaluator=human must carry approval_id; unsatisfied at run time => gate FAILS",
+      "on_violation": "FAIL"
+    },
+    {
+      "id": "forbidden_outputs_enforced",
+      "rule": "output_contract.forbidden_outputs and scope.excluded checked against declared actions",
+      "on_violation": "BLOCK"
+    },
+    {
+      "id": "no_fabricated_evidence",
+      "rule": "agent_assertion cannot satisfy a gate or acceptance test",
+      "on_violation": "WARNING"
+    },
+    {
+      "id": "ledger_consistency",
+      "rule": "VERIFICATION_LEDGER counts must equal actual block counts",
+      "on_violation": "FAIL"
+    }
+  ],
+  "verdicts": {
+    "PASS": "well-formed, governed, no honesty violations",
+    "PASS_WITH_LIMITS": "valid but some checks UNEVALUATED in simulation or rely on warning-level evidence",
+    "FAIL": "a governance violation"
+  },
+  "receipt_verification": {
+    "sha256": "byte integrity of the whole receipt",
+    "h10": "semantic core (verdict, tasks, blocks)",
+    "signature": "UNSIGNED unless a Signet Authority signed it"
+  },
+  "never_claim": ["tamper-proof", "safe", "proves the work is correct"],
+  "simulation_note": "Simulation evaluates declared actions, not live agent behavior."
+}

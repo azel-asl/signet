@@ -1,0 +1,31 @@
+{
+  "$comment": "Machine-readable summary of Signet parser checks. Source of truth is src/parser.ts via `signet validate`. Use for logical (ZIP-mode) checking.",
+  "block_syntax": {
+    "open": ["asl::NAME", "::NAME"],
+    "close": "::END",
+    "lines": "key = value",
+    "value_types": ["string", "number", "boolean", "array"],
+    "comments": "#",
+    "string_normalization": "NFC",
+    "key_order_significant": false
+  },
+  "required_blocks_by_tier": {
+    "1": ["META", "ROLE", "SCOPE", "AUTHORITY", "PERMISSIONS"],
+    "2": ["META", "ROLE", "SCOPE", "PURPOSE", "INPUTS", "PROCESS", "OUTPUT_CONTRACT", "FAILURE_MODES", "RECEIPT", "EXECUTION_PLAN", "AUTHORITY", "PERMISSIONS", "LOCKS", "LOCK_CHECK_RULES", "GATES", "ACCEPTANCE_TESTS", "EVIDENCE_POLICY", "EVIDENCE_TEMPLATES", "DRIFT", "ESCALATION", "COMPLETION", "VERIFICATION_LEDGER"],
+    "3": ["META", "ROLE", "SCOPE", "PURPOSE", "INPUTS", "PROCESS", "OUTPUT_CONTRACT", "FAILURE_MODES", "RECEIPT", "EXECUTION_PLAN", "AUTHORITY", "PERMISSIONS", "LOCKS", "LOCK_CHECK_RULES", "GATES", "ACCEPTANCE_TESTS", "EVIDENCE_POLICY", "EVIDENCE_TEMPLATES", "DRIFT", "ESCALATION", "COMPLETION", "VERIFICATION_LEDGER"]
+  },
+  "meta_required_keys": ["id", "packet_tier", "type", "owner", "status"],
+  "task_required_keys": ["description", "required", "depends_on", "on_dependency_fail", "retry_max", "retry_backoff", "on_retry_exhausted", "evidence_type", "evidence_template", "expected_result", "status"],
+  "count_crosschecks": {
+    "required_task_count": "number of TASK_NNN blocks",
+    "required_gate_count": "number of GATE blocks",
+    "required_lock_count": "number of LOCK blocks",
+    "required_acceptance_test_count": "number of AT blocks",
+    "required_receipt_count": "1 if RECEIPT.receipt_required is true"
+  },
+  "tier3_extra": {
+    "authority.approval_required": true,
+    "at_least_one_human_gate": "GATE with evaluator=human and approval_id"
+  },
+  "result": ["PASS", "FAIL"]
+}
