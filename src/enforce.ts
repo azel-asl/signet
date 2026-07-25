@@ -16,6 +16,10 @@
 // Matching semantics mirror src/runtime.ts evaluateAction exactly:
 // lowercase, strip leading ./, bidirectional substring containment,
 // packet strings treated as literals (no regex from packet data).
+// Kind semantics also mirror evaluateAction: read-kind tools (Read, Glob,
+// Grep, NotebookRead) are checked ONLY against scope.excluded patterns —
+// output_contract.forbidden_outputs constrains what may be produced, not
+// what may be read. Write/edit tools and Bash are checked against both.
 
 import { randomBytes } from 'node:crypto';
 import type { ParsedPacket, EnforcementReceipt, EnforcementEvent } from './types.js';
@@ -112,6 +116,12 @@ try { call = JSON.parse(input); } catch { process.exit(0); }
 const toolName = call.tool_name ?? '';
 const ti = call.tool_input ?? {};
 
+// Action kind mirrors src/runtime.ts evaluateAction: reads are checked only
+// against scope.excluded — forbidden_outputs constrains production, not
+// reading. Everything else (writes, edits, Bash) is checked against both.
+const READ_TOOLS = new Set(['Read', 'Glob', 'Grep', 'NotebookRead']);
+const actionKind = READ_TOOLS.has(toolName) ? 'read' : 'other';
+
 // Target extraction per tool. File tools → path; Bash → whole command string.
 const targets = [];
 if (typeof ti.file_path === 'string') targets.push(ti.file_path);
@@ -125,6 +135,7 @@ for (const target of targets) {
   if (nt.length === 0) continue;
   for (const p of manifest.patterns) {
     if (!p.pattern) continue;
+    if (actionKind === 'read' && p.source !== 'scope.excluded') continue;
     if (!(nt.includes(p.pattern) || p.pattern.includes(nt))) continue;
 
     const event = {

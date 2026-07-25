@@ -146,6 +146,82 @@ describe('hook.mjs end-to-end', () => {
   });
 });
 
+// ── hook action-kind semantics (mirror runtime.ts evaluateAction) ──
+// runtime.ts checks read-kind actions ONLY against scope.excluded;
+// forbidden_outputs constrains what may be produced, not what may be read.
+// Regression: a read-only source dir listed in forbidden_outputs must stay
+// readable under hook enforcement (originally it became unreadable).
+
+describe('hook.mjs action-kind semantics', () => {
+  let dir: string;
+  let hookPath: string;
+
+  const call = (toolName: string, toolInput: object): { code: number; stderr: string } => {
+    try {
+      execFileSync('node', [hookPath], {
+        input: JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: toolName, tool_input: toolInput }),
+        encoding: 'utf-8',
+      });
+      return { code: 0, stderr: '' };
+    } catch (e: any) {
+      return { code: e.status, stderr: String(e.stderr ?? '') };
+    }
+  };
+
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'signet-hook-kind-test-'));
+    // Hand-built manifest: 'sprint/input/' exists ONLY in forbidden_outputs
+    // (write-protected, readable); 'secrets/' exists ONLY in scope.excluded
+    // (unreadable). The overlap-free split is what isolates the semantics.
+    const manifest = {
+      manifest_version: 'signet-enforce-manifest-v1',
+      packet_id: 'kind-semantics-test',
+      packet_sha256: '0'.repeat(64),
+      match_semantics: 'normalized bidirectional substring containment; literals only',
+      patterns: [
+        { pattern: 'sprint/input/', source: 'output_contract.forbidden_outputs', lock_id: 'LOCK_RO', lock_rule: 'Source dir sprint/input/ is read-only' },
+        { pattern: 'secrets/', source: 'scope.excluded', lock_id: 'LOCK_SEC', lock_rule: 'Do not touch secrets/' },
+      ],
+      generated_at: '2026-07-25T00:00:00Z',
+    };
+    writeFileSync(join(dir, 'enforce.json'), JSON.stringify(manifest));
+    hookPath = join(dir, 'hook.mjs');
+    writeFileSync(hookPath, HOOK_SCRIPT);
+  });
+
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  it('denies a Write into a forbidden_outputs path', () => {
+    const r = call('Write', { file_path: '/work/sprint/input/template.txt', content: 'x' });
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain('LOCK_RO');
+  });
+
+  it('allows a Read of a forbidden_outputs path — write-protected is not unreadable', () => {
+    const r = call('Read', { file_path: '/work/sprint/input/template.txt' });
+    expect(r.code).toBe(0);
+  });
+
+  it('denies a Read of a scope.excluded path', () => {
+    const r = call('Read', { file_path: '/work/secrets/key.pem' });
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain('LOCK_SEC');
+  });
+
+  it('still denies Bash touching a forbidden_outputs path (execute-kind checks both sources)', () => {
+    const r = call('Bash', { command: 'echo x > sprint/input/template.txt' });
+    expect(r.code).toBe(2);
+    expect(r.stderr).toContain('LOCK_RO');
+  });
+
+  it('Grep is read-kind: exempt from forbidden_outputs, still bound by scope.excluded', () => {
+    const ok = call('Grep', { file_path: '/work/sprint/input/template.txt' });
+    expect(ok.code).toBe(0);
+    const denied = call('Grep', { file_path: '/work/secrets/notes.txt' });
+    expect(denied.code).toBe(2);
+  });
+});
+
 // ── enforcement receipt build + verify ───────────────────────
 
 describe('enforcement receipt', () => {
