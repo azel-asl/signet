@@ -23,16 +23,19 @@ is imported, copied, or transplanted — a regression test enforces this.
 - `fixtures/invalid/` — the six invalid world variants (M2).
 - `reports/` — generated parity reports.
 
-Contract-change requests live one level up in `../contract-changes/`:
+Contract-change requests live one level up in `../contract-changes/`.
+Both were accepted by Fable on 2026-10-07 (reference `cd0db9e`):
 
-- **CCR-001** — the frozen world file fails the frozen schema at 10 `id`-pattern
-  pointers (`/metadata/id`, `/rules/0–8/id`); proposes a targeted schema fix.
-- **CCR-002** — the one-time XAS-CANON-1 re-stamp of the four historical
-  snapshots' `state_hash` values (values fully determined by frozen content).
+- **CCR-001** (accepted with modification) — the frozen world file failed the
+  frozen schema at 10 `id`-pattern pointers. The schema now has `$defs/world_id`
+  (`metadata.id`) and `$defs/rule_id` (`rules[].id`); entity-id strictness kept.
+  The loader is strict with no deviations.
+- **CCR-002** (accepted with modification) — one-time XAS-CANON-1 re-stamp of all
+  six stamped snapshots' `state_hash` values; `manifest.json` carries
+  `hash_rule: "XAS-CANON-1"`. Runtime hashes equal the corrected stored values.
 
-Until Fable accepts them, the loader stays strict by default; the parity runner
-proceeds downstream of the disputed world-validation check only through the
-explicit, logged `allowDeviations: ['CCR-001']` affordance.
+The `st_` station-to-skill mapping (D5) is a recommended follow-up contract
+issue, not authorized work; the current mapping stands.
 
 ## Run
 
@@ -44,8 +47,7 @@ npm run parity    # rebuilds the 4 canonical snapshots, writes reports/
 
 ## Status
 
-Content parity (state, metrics, diagnosis, evidence_refs) **PASSES** at all four
-canonical T (17:45, 18:08, 18:20, 19:00); runs are deterministic; checkpoint +
-incremental replay equals full replay. `state_hash` equality and strict world
-validation are blocked on CCR-002 and CCR-001 respectively — see the parity
-report for the exact values and pointers.
+Content parity (state, metrics, diagnosis, evidence_refs) and `state_hash`
+parity **PASS** at all four canonical T (17:45, 18:08, 18:20, 19:00) against the
+corrected reference (`cd0db9e`); runs are deterministic; checkpoint +
+incremental replay equals full replay. See the parity report for exact hashes.

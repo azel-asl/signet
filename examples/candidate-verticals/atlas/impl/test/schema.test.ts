@@ -10,38 +10,16 @@ import {
 const j = (p: string) => loadJsonFile(p);
 
 describe('schema validation', () => {
-  it('frozen world file: schema validation reports exactly the CCR-001 id-pattern issues', async () => {
+  it('frozen world file validates cleanly against the corrected schema (CCR-001 resolved)', async () => {
     const schema = await j(WORLD_SCHEMA);
     const world = await j(WORLD_FILE);
-    const issues = createValidator(schema as Record<string, any>).validate(world);
-    const pointers = issues.map((i) => i.pointer).sort();
-    expect(pointers).toEqual([
-      '/metadata/id',
-      '/rules/0/id', '/rules/1/id', '/rules/2/id', '/rules/3/id', '/rules/4/id',
-      '/rules/5/id', '/rules/6/id', '/rules/7/id', '/rules/8/id',
-    ]);
+    expect(createValidator(schema as Record<string, any>).validate(world)).toEqual([]);
   });
 
-  it('strict loadWorld rejects the frozen world with JSON pointers (CCR-001 pending)', async () => {
-    const err = await loadWorld(WORLD_FILE, WORLD_SCHEMA).catch((e) => e);
-    expect(err).toBeInstanceOf(WorldLoadError);
-    expect(err.issues).toHaveLength(10);
-    expect(err.issues[0].pointer).toBe('/metadata/id');
-  });
-
-  it('loadWorld with explicit allowDeviations ["CCR-001"] loads with 10 logged warnings', async () => {
-    const { world, warnings } = await loadWorld(WORLD_FILE, WORLD_SCHEMA, { allowDeviations: ['CCR-001'] });
+  it('strict loadWorld loads the frozen world with zero issues', async () => {
+    const world = await loadWorld(WORLD_FILE, WORLD_SCHEMA);
     expect(world.metadata.id).toBe('restaurant-v0');
-    expect(warnings).toHaveLength(10);
-  });
-
-  it('allowDeviations does not swallow unrelated issues', async () => {
-    // skill-violation is not a CCR-001 issue: it must still throw even with the deviation allowed.
-    const err = await loadWorld(`${INVALID_DIR}/skill-violation.json`, WORLD_SCHEMA, {
-      allowDeviations: ['CCR-001'],
-    }).catch((e) => e);
-    expect(err).toBeInstanceOf(WorldLoadError);
-    expect(err.issues.some((i: { pointer: string }) => i.pointer === '/initial_state/assignments/emp_05')).toBe(true);
+    expect(world.rules).toHaveLength(9);
   });
 
   it.each([

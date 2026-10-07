@@ -10,7 +10,7 @@ import { reduceTo } from '../src/reducer.js';
 import { buildCheckpoints, reduceToCheckpointed } from '../src/checkpoints.js';
 import { buildSnapshot, computeMetrics, iso } from '../src/views.js';
 import { compareSnapshots } from '../src/parity.js';
-import { canonicalJson, sha256Hex, stateHash } from '../src/canon.js';
+import { stateHash } from '../src/canon.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ATLAS = path.resolve(here, '..', '..', '..'); // dist/scripts -> atlas/
@@ -32,59 +32,37 @@ function tOf(world: { time: { origin: string } }, hhmm: string): number {
 }
 
 async function main(): Promise<void> {
-  // Strict load first: the frozen world is expected to FAIL here (CCR-001).
-  // The replay demonstration below proceeds only through the explicit,
-  // logged deviation affordance — never silently.
-  let strictError: string | null = null;
-  try {
-    await loadWorld(
-      path.join(FIX, 'world.restaurant-v0.json'),
-      path.join(SCHEMA, 'atlas-world-definition.schema.json'),
-    );
-  } catch (e) {
-    strictError = e instanceof Error ? e.message : String(e);
-  }
-  const { world, warnings } = await loadWorld(
+  // Strict load: the corrected reference world must validate with no deviations.
+  const world = await loadWorld(
     path.join(FIX, 'world.restaurant-v0.json'),
     path.join(SCHEMA, 'atlas-world-definition.schema.json'),
-    { allowDeviations: ['CCR-001'] },
   );
-  if (warnings.length) {
-    console.log(`NOTE: proceeding under explicitly allowed deviation CCR-001 (${warnings.length} warnings):`);
-    for (const w of warnings.slice(0, 12)) console.log(`  ${w.pointer}: ${w.message}`);
-  }
   const ledger = await loadLedger(
     path.join(FIX, 'normalized', 'events.ndjson'),
     path.join(SCHEMA, 'atlas-event.schema.json'),
   );
+  const manifest = JSON.parse(await readFile(path.join(FIX, 'manifest.json'), 'utf8'));
   const checkpoints = buildCheckpoints(world, ledger.events);
 
   const snapshots: Record<string, any>[] = [];
   for (const c of CANONICAL) {
     const expected = JSON.parse(await readFile(path.join(FIX, c.fixture), 'utf8'));
     const t = tOf(world, c.hhmm);
-    const runA = buildSnapshot(world, {
-      id: expected.id, title: expected.title, log: ledger.events, t,
-      branch: 'history:day1', mode: 'RECONSTRUCT', claim_class: 'derived',
+    const input = (id: string) => ({
+      id, title: expected.title, log: ledger.events, t,
+      branch: 'history:day1', mode: 'RECONSTRUCT' as const, claim_class: 'derived' as const,
       narrative: expected.narrative ?? '',
     });
-    const runB = buildSnapshot(world, {
-      id: expected.id, title: expected.title, log: ledger.events, t,
-      branch: 'history:day1', mode: 'RECONSTRUCT', claim_class: 'derived',
-      narrative: expected.narrative ?? '',
-    });
+    const runA = buildSnapshot(world, input(expected.id));
+    const runB = buildSnapshot(world, input(expected.id));
     const cmp = compareSnapshots(expected, runA);
     // checkpoint-vs-full-replay equivalence at this T
     const full = reduceTo(world, ledger.events, t);
     const { result: viaCp } = reduceToCheckpointed(world, ledger.events, checkpoints, t);
-    const mFull = computeMetrics(world, full.state, t, ledger.events);
-    const mCp = computeMetrics(world, viaCp.state, t, ledger.events);
-    const fullHash = stateHash(full.state, mFull);
-    const cpHash = stateHash(viaCp.state, mCp);
-    // CCR-002: the re-stamp value is fully determined by the frozen file's own
-    // content — canonicalize it independently of the runtime.
-    const restampHash = sha256Hex(canonicalJson({ state: expected.state, metrics: expected.metrics }));
-    const contentMatch = Object.values(cmp.sections).every((s) => s.match);
+    const fullHash = stateHash(full.state, computeMetrics(world, full.state, t, ledger.events));
+    const cpHash = stateHash(viaCp.state, computeMetrics(world, viaCp.state, t, ledger.events));
+    const deterministic = runA.state_hash === runB.state_hash;
+    const checkpointEquivalent = fullHash === cpHash;
     snapshots.push({
       id: expected.id,
       t, ts: iso(world, t),
@@ -92,56 +70,35 @@ async function main(): Promise<void> {
       expected_hash: cmp.expectedHash,
       actual_hash: cmp.actualHash,
       hash_match: cmp.hashMatch,
-      restamp_hash_ccr002: restampHash,
-      restamp_matches_runtime: restampHash === (runA.state_hash as string),
-      content_match: contentMatch,
-      run_a_hash: runA.state_hash,
-      run_b_hash: runB.state_hash,
-      deterministic: runA.state_hash === runB.state_hash,
-      full_replay_hash: fullHash,
-      checkpoint_replay_hash: cpHash,
-      checkpoint_equivalent: fullHash === cpHash,
+      content_match: Object.values(cmp.sections).every((s) => s.match),
       sections: Object.fromEntries(
         Object.entries(cmp.sections).map(([k, v]) => [k, { match: v.match, diff_count: v.diffs.length }]),
       ),
       diffs: cmp.diffs.slice(0, 10),
-      // Per handoff §3 a contract disagreement remains a failing check until
-      // approved: hash equality is gated on CCR-002, world validation on CCR-001.
-      hash_verdict: cmp.hashMatch ? 'PASS' : 'FAIL (CCR-002 pending)',
-      verdict:
-        contentMatch && runA.state_hash === runB.state_hash && fullHash === cpHash
-          ? 'PASS (content)'
-          : 'FAIL',
+      run_a_hash: runA.state_hash,
+      run_b_hash: runB.state_hash,
+      deterministic,
+      full_replay_hash: fullHash,
+      checkpoint_replay_hash: cpHash,
+      checkpoint_equivalent: checkpointEquivalent,
+      verdict: cmp.match && deterministic && checkpointEquivalent ? 'PASS' : 'FAIL',
     });
   }
 
-  const contentPass = snapshots.every((s) => s.verdict === 'PASS (content)');
-  const hashPass = snapshots.every((s) => s.hash_verdict === 'PASS');
-  const blockers: string[] = [];
-  if (strictError) blockers.push('CCR-001: frozen world fails frozen schema (10 id-pattern pointers)');
-  if (!hashPass) blockers.push('CCR-002: state_hash re-stamp to XAS-CANON-1 pending');
-  if (!contentPass) blockers.push('content parity failures (see diffs)');
+  const allPass = snapshots.every((s) => s.verdict === 'PASS');
   const report = {
     generated_at: new Date().toISOString(),
     engine: 'atlas-impl/0.1.0',
+    reference_commit: 'cd0db9e',
     world: world.metadata.id,
-    world_validation: strictError
-      ? { verdict: 'FAIL', reason: 'CCR-001 pending (see contract-changes/CCR-001.md)', detail: strictError }
-      : { verdict: 'PASS' },
-    world_load_warnings: warnings,
+    world_validation: 'PASS',
+    manifest_hash_rule: manifest.hash_rule ?? null,
     branch: 'history:day1',
     ledger_events: ledger.count,
     ledger_input_order_matched: ledger.inputOrderMatched,
     checkpoints_built: checkpoints.length,
     snapshots,
-    content_parity: contentPass ? 'PASS' : 'FAIL',
-    hash_parity: hashPass ? 'PASS' : 'FAIL',
-    blockers,
-    overall: blockers.length === 0 ? 'PASS' : 'FAIL',
-    overall_note:
-      blockers.length === 0
-        ? 'Milestone 1 passes.'
-        : 'Implementation complete; content parity holds. M1 PASS is blocked on Fable accepting the filed CCRs — no frozen content disagreement remains.',
+    overall: allPass ? 'PASS' : 'FAIL',
   };
 
   await mkdir(REPORTS, { recursive: true });
@@ -149,17 +106,17 @@ async function main(): Promise<void> {
   const md = [
     '# ATLAS V0 Milestone 1 — parity report',
     '',
-    `Generated ${report.generated_at} · engine ${report.engine} · world ${report.world} · branch history:day1`,
+    `Generated ${report.generated_at} · engine ${report.engine} · reference ${report.reference_commit} · world ${report.world} · branch history:day1`,
+    `World validation: ${report.world_validation} · manifest.hash_rule: ${report.manifest_hash_rule}`,
     `Ledger: ${ledger.count} events (committed order matched reduction order: ${ledger.inputOrderMatched}) · checkpoints: ${checkpoints.length}`,
     '',
-    '| Snapshot | T | Expected | Actual (canonical) | Re-stamp = actual | Content | Hash | Checkpoint ≡ full |',
+    '| Snapshot | T | Expected hash | Actual hash | Hash | Content | Deterministic | Checkpoint ≡ full | Verdict |',
     '|---|---|---|---|---|---|---|---|---|',
     ...snapshots.map((s) =>
-      `| ${s.id} | ${s.ts} | \`${String(s.expected_hash).slice(0, 12)}…\` | \`${String(s.actual_hash).slice(0, 12)}…\` | ${s.restamp_matches_runtime ? 'yes' : 'NO'} | ${s.content_match ? 'PASS' : 'FAIL'} | ${s.hash_verdict} | ${s.checkpoint_equivalent ? 'yes' : 'NO'} |`,
+      `| ${s.id} | ${s.ts} | \`${s.expected_hash}\` | \`${s.actual_hash}\` | ${s.hash_match ? 'match' : '**MISMATCH**'} | ${s.content_match ? 'match' : '**MISMATCH**'} | ${s.deterministic ? 'yes' : '**NO**'} | ${s.checkpoint_equivalent ? 'yes' : '**NO**'} | **${s.verdict}** |`,
     ),
     '',
-    `Content parity: **${report.content_parity}** · Hash parity: **${report.hash_parity}** · Overall: **${report.overall}**`,
-    ...blockers.map((b) => `- Blocker: ${b}`),
+    `Overall: **${report.overall}**`,
     '',
     ...snapshots.flatMap((s) =>
       s.verdict === 'FAIL'
@@ -170,17 +127,10 @@ async function main(): Promise<void> {
   await writeFile(path.join(REPORTS, 'parity-report.md'), md + '\n');
 
   for (const s of snapshots) {
-    console.log(
-      `${s.verdict} ${s.id} @ ${s.ts}  expected=${String(s.expected_hash).slice(0, 16)} ` +
-      `actual=${String(s.actual_hash).slice(0, 16)} restamp=${String(s.restamp_hash_ccr002).slice(0, 16)}`,
-    );
+    console.log(`${s.verdict} ${s.id} @ ${s.ts}  hash_match=${s.hash_match} content_match=${s.content_match}`);
   }
-  console.log(`content: ${report.content_parity}, hashes: ${report.hash_parity}, overall: ${report.overall}`);
-  if (blockers.length) {
-    console.log('blockers:');
-    for (const b of blockers) console.log(`  - ${b}`);
-  }
-  if (report.overall !== 'PASS') process.exit(1);
+  console.log(`overall: ${report.overall}`);
+  if (!allPass) process.exit(1);
 }
 
 main().catch((e) => {

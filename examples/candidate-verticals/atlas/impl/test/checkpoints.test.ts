@@ -8,7 +8,7 @@ import { computeMetrics } from '../src/views.js';
 import { canonicalJson } from '../src/canon.js';
 import { CANONICAL, EVENT_SCHEMA, LEDGER_FILE, WORLD_FILE, WORLD_SCHEMA, tOf } from './paths.js';
 
-const worldP = loadWorld(WORLD_FILE, WORLD_SCHEMA, { allowDeviations: ['CCR-001'] });
+const worldP = loadWorld(WORLD_FILE, WORLD_SCHEMA);
 const ledgerP = loadLedger(LEDGER_FILE, EVENT_SCHEMA);
 
 function hashOf(world: any, state: any, t: number, log: any[]): string {
@@ -17,7 +17,7 @@ function hashOf(world: any, state: any, t: number, log: any[]): string {
 
 describe('checkpoints', () => {
   it('writes checkpoints at capacity/assignment events and every 500 events', async () => {
-    const { world } = await worldP;
+    const world = await worldP;
     const ledger = await ledgerP;
     const cps = buildCheckpoints(world, ledger.events);
     expect(cps.length).toBeGreaterThan(0);
@@ -34,7 +34,7 @@ describe('checkpoints', () => {
   });
 
   it('full replay equals checkpoint + incremental replay at every canonical T', async () => {
-    const { world } = await worldP;
+    const world = await worldP;
     const ledger = await ledgerP;
     const cps = buildCheckpoints(world, ledger.events);
     for (const c of CANONICAL) {
@@ -48,7 +48,7 @@ describe('checkpoints', () => {
   });
 
   it('checkpoint equivalence holds at 20 seeded arbitrary T (property test)', async () => {
-    const { world } = await worldP;
+    const world = await worldP;
     const ledger = await ledgerP;
     const cps = buildCheckpoints(world, ledger.events);
     let seed = 42;
@@ -64,7 +64,7 @@ describe('checkpoints', () => {
   });
 
   it('nearestCheckpoint picks the latest checkpoint at or before T', async () => {
-    const { world } = await worldP;
+    const world = await worldP;
     const ledger = await ledgerP;
     const cps = buildCheckpoints(world, ledger.events);
     const first = cps[0];
@@ -78,7 +78,7 @@ describe('checkpoints', () => {
   });
 
   it('deleting checkpoints changes nothing but speed (reduceTo without them agrees)', async () => {
-    const { world } = await worldP;
+    const world = await worldP;
     const ledger = await ledgerP;
     const t = tOf(world.time.origin, '18:20');
     const noCp = reduceTo(world, ledger.events, t);

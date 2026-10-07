@@ -5,7 +5,7 @@ import { loadWorld } from '../src/world.js';
 import { indexByEventId, indexByRecordId, loadLedger } from '../src/ledger.js';
 import { CANONICAL, EVENT_SCHEMA, FIX, LEDGER_FILE, WORLD_FILE, WORLD_SCHEMA } from './paths.js';
 
-const worldP = loadWorld(WORLD_FILE, WORLD_SCHEMA, { allowDeviations: ['CCR-001'] });
+const worldP = loadWorld(WORLD_FILE, WORLD_SCHEMA);
 const ledgerP = loadLedger(LEDGER_FILE, EVENT_SCHEMA);
 
 describe('provenance', () => {

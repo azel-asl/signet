@@ -29,51 +29,15 @@ function issue(issues: ValidationIssue[], pointer: string, message: string): voi
   issues.push({ pointer, message });
 }
 
-export interface LoadWorldOptions {
-  /**
-   * Contract deviations explicitly allowed by CCR number, e.g. ['CCR-001'].
-   * Deviations are NEVER silent: they are returned as warnings for the caller
-   * to log. Default: none — the loader is strict.
-   */
-  allowDeviations?: string[];
-}
-
-export interface LoadWorldResult {
-  world: World;
-  /** Issues downgraded from errors via an explicit allowDeviations entry. */
-  warnings: ValidationIssue[];
-}
-
-/** True for the exact 10 id-pattern issues documented in CCR-001. */
-function isCcr001Issue(i: ValidationIssue): boolean {
-  return (
-    (i.pointer === '/metadata/id' || /^\/rules\/\d+\/id$/.test(i.pointer)) &&
-    i.message.includes('must match pattern')
-  );
-}
-
-export async function loadWorld(
-  worldPath: string,
-  schemaPath: string,
-  opts: LoadWorldOptions = {},
-): Promise<LoadWorldResult> {
+export async function loadWorld(worldPath: string, schemaPath: string): Promise<World> {
   const raw = await loadJsonFile(worldPath);
   const schemaDoc = await loadJsonFile(schemaPath);
   const issues: ValidationIssue[] = createValidator(schemaDoc as Record<string, any>).validate(raw);
+  if (issues.length > 0) throw new WorldLoadError(issues);
   const world = raw as World;
-  // Semantic checks run on the parsed document regardless; they only add issues.
-  const semanticIssues: ValidationIssue[] = [];
-  try {
-    semanticChecks(world, semanticIssues);
-  } catch {
-    // semanticChecks never throws; defensive only
-  }
-  const all = [...issues, ...semanticIssues];
-  const allowed = new Set(opts.allowDeviations ?? []);
-  const warnings = allowed.has('CCR-001') ? all.filter(isCcr001Issue) : [];
-  const fatal = all.filter((i) => !warnings.includes(i));
-  if (fatal.length > 0) throw new WorldLoadError(fatal);
-  return { world, warnings };
+  semanticChecks(world, issues);
+  if (issues.length > 0) throw new WorldLoadError(issues);
+  return world;
 }
 
 export function semanticChecks(world: World, issues: ValidationIssue[] = []): ValidationIssue[] {

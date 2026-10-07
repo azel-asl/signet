@@ -30,6 +30,11 @@ describe('fixture lock', () => {
     const ledger = await loadLedger(LEDGER_FILE, EVENT_SCHEMA);
     expect(ledger.count).toBe(1815);
   });
+
+  it('manifest declares the XAS-CANON-1 hash rule (CCR-002)', async () => {
+    const manifest = JSON.parse(await readFile(path.join(FIX, 'manifest.json'), 'utf8'));
+    expect(manifest.hash_rule).toBe('XAS-CANON-1');
+  });
 });
 
 describe('oracle independence', () => {

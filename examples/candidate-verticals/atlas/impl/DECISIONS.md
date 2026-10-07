@@ -66,13 +66,13 @@ assigned Fry staff or targeting Fry, and WORK_QUEUED/WORK_STARTED events for wor
 currently queued or in progress at Fry — in ledger order, mapped to
 `{event_id, type, ts, ...provenance}`.
 
-## D10 — `state_hash` = sha256(XAS-CANON-1({state, metrics})); NO re-stamp needed
+## D10 — `state_hash` = sha256(XAS-CANON-1({state, metrics})); re-stamp COMPLETE
 Source: spec 04 + handoff §2 + fixture README invariant 2. XAS-CANON-1 = recursively
-sorted keys, no whitespace, numbers as shortest round-trip. The oracle's emitted
-`JSON.stringify({state, metrics})` is byte-identical to the canonical form, so the
-committed `state_hash` values already match XAS-CANON-1 output. Recorded here as the
-"one recorded regeneration": verified, not changed. If any committed hash ever fails
-to match, that is a CCR, not a silent edit.
+sorted keys, no whitespace, numbers as shortest round-trip. Fable accepted CCR-002
+(2026-10-07, reference cd0db9e): the oracle now hashes canonical JSON and all six
+stamped snapshots were re-stamped once; `manifest.json` carries
+`hash_rule: "XAS-CANON-1"`. The runtime's independently computed hashes equal the
+corrected stored values exactly. The temporary "re-stamp prediction" concept is removed.
 
 ## D11 — Checkpoints: every 500 events + at capacity/assignment events
 Source: spec 04. Checkpoint = `{t, state, ledger_seq, state_hash}`. Resume skips
