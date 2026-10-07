@@ -1,5 +1,6 @@
 {
   "generated_by": "oracle-0.1.0",
+  "hash_rule": "XAS-CANON-1",
   "world": "restaurant-v0",
   "world_sha256": "47e1d056eb84090faac35aebe24b8d13b2e56ca95bfd6a61909c652216962abc",
   "scenario_sha256": "ee433aa4deb2985a636672db440cadf5c14c0a07fce5d401bed0b86670437417",
@@ -22,8 +23,8 @@
     "day2/raw/shift_notes.csv": "ae4bb7a38f0d73fb72e02c46993a8ed7c7faa87d0a46d0f453ce6d48167c4c0e",
     "day2/raw/staff_events.csv": "8c45b59a7daf1a5d86cebf8e89905f926a4de0cf81dd00aad943214c8a2ecb79",
     "expected/comparison.json": "03faa50824c8e6d476d5740f7e24184658c89d9b10230bf6be0861726a980bc2",
-    "expected/s4_observed_reference.json": "5de88aba40243bc0244db00c235b16cbc4928b920d2039a1ecd2ac3558a96d95",
-    "expected/s4b_simulated_baseline.json": "959f599c1c6d8006b76f16e4c3e6102215c8733e2313c71109a01cceb2134ee2",
+    "expected/s4_observed_reference.json": "accf80d314f6513a2524c4446eb00c6a2aad41705d5a94a0ba23de98d32ac9c4",
+    "expected/s4b_simulated_baseline.json": "244b70998d3084f1400e7feccd7cc5492731d523223eadcb5c0c33f023896b97",
     "expected/sim_baseline.events.ndjson": "261ecc36f11827adab7215f719d5ec92d4b8b942f80b890ab855b20613950193",
     "expected/sim_scenario.events.ndjson": "4c2c29b375fcef04a70aa84fa5b27378900889c7244aad085791a6eaad3eb697",
     "normalized/events.ndjson": "b9de6d32897226d1964be65a33df4b31723415859034d776026ca98da2ea466b",
@@ -32,9 +33,9 @@
     "raw/pos_orders.csv": "144afc4d5144af0a8481ec6caeb91ddb8debb2f4e84ec5afa85fe1b44204c32a",
     "raw/shift_notes.csv": "ae4bb7a38f0d73fb72e02c46993a8ed7c7faa87d0a46d0f453ce6d48167c4c0e",
     "raw/staff_events.csv": "9503dc2e7f375874649ef85601beee0baf9882814f81f4ff510be13e98e3b378",
-    "snapshots/s1_normal.json": "7105dd608fb5444f0d6b11e9baaba3e944d9775120664c5842544b4dc36f789e",
-    "snapshots/s2_bottleneck_emerging.json": "88da5bc1d146095da2282796bb0fb393b383c0d932b2f58cd6add5ae2b3fe8cf",
-    "snapshots/s3_bottleneck_active.json": "336701beabdd8e9313eb479e141b4ee0ff951fe79d3ab19ad6d2434f0358e640",
-    "snapshots/s4_simulated_intervention.json": "f70cecf1acc9d8d7df9d2d2068786a6f3e147273c30a2c197a4095669e6f3201"
+    "snapshots/s1_normal.json": "3845369de13747f75b8dd512c4431342d50f5c0f79fd5bedab3be758d605a17a",
+    "snapshots/s2_bottleneck_emerging.json": "a0602438e27061dcc833dbd050f4bf17d4f327e66c81098db7b385f7c3c6c6c3",
+    "snapshots/s3_bottleneck_active.json": "d26be9db6ea4446b9ff5c8c40e9a01ff4502c6c8fafe1bd54d17e0229daf0b9c",
+    "snapshots/s4_simulated_intervention.json": "df927a7ccf52251d4944de370ad6084b98f7269ac620d1da4bd4dd098de39c94"
   }
 }

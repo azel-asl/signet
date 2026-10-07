@@ -40,7 +40,7 @@ key and the metric definitions in `06-behavior-simulation.md` and `04-time.md`.
 | Metrics: utilization | exact to 3 decimals as emitted by the oracle |
 | Simulation traces (baseline, scenario) | exact event sequence and payloads |
 | Comparison | exact |
-| `state_hash` | exact once M1 re-stamps hashes with XAS-CANON-1 canonical JSON (one recorded regeneration; see `fixtures/restaurant-v0/README.md` invariant 2) |
+| `state_hash` | exact (XAS-CANON-1 canonical JSON of `{state, metrics}`; re-stamped once on 2026-10-07 under CCR-002, see `fixtures/restaurant-v0/CHANGELOG.md`) |
 
 There are no other tolerances in V0. A mismatch is a defect in the runtime or a
 contract-change request, never a reason to edit an expected file.

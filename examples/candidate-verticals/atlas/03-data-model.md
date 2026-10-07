@@ -8,6 +8,8 @@ without a database.
 
 ```ts
 type Id = string;            // ^[a-z][a-z0-9_]*$ ; stable, canonical, never a source identifier
+type WorldId = string;       // ^[a-z][a-z0-9_-]*$ ; metadata.id / dataset slug (e.g. restaurant-v0); CCR-001
+type RuleId = string;        // ^R[0-9]{2}$ ; rules[].id, R01..R09 as named in 06; CCR-001
 type BranchId = `history:${string}` | `sim:${string}`;
 type Seconds = number;       // integer unix seconds; the only time the engine orders on
 ```

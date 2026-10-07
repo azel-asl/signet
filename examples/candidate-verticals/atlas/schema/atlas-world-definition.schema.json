@@ -12,7 +12,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "name", "version", "domain"],
       "properties": {
-        "id": { "$ref": "#/$defs/id" }, "name": { "type": "string" }, "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "id": { "$ref": "#/$defs/world_id" }, "name": { "type": "string" }, "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
         "domain": { "type": "string" }, "description": { "type": "string" },
         "status": { "enum": ["synthetic", "reconstructed", "live"] }, "authors": { "type": "array", "items": { "type": "string" } }, "created": { "type": "string", "format": "date" }
       }
@@ -51,7 +51,7 @@
     "rules": {
       "type": "array",
       "items": { "type": "object", "additionalProperties": false, "required": ["id", "kind", "description"],
-        "properties": { "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["station_capacity", "queue_discipline", "no_preemption", "single_assignment", "assembly_barrier", "handoff", "station_status", "skills_required", "no_balking"] }, "description": { "type": "string" }, "params": { "type": "object" } } },
+        "properties": { "id": { "$ref": "#/$defs/rule_id" }, "kind": { "enum": ["station_capacity", "queue_discipline", "no_preemption", "single_assignment", "assembly_barrier", "handoff", "station_status", "skills_required", "no_balking"] }, "description": { "type": "string" }, "params": { "type": "object" } } },
       "description": "Closed enum of rule kinds implemented by the engine. An unknown kind is a load error, never a silent no-op."
     },
     "initial_state": {
@@ -95,6 +95,8 @@
   },
   "$defs": {
     "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "world_id": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$", "description": "World/dataset slug (metadata.id). Hyphens allowed; distinct from entity ids." },
+    "rule_id": { "type": "string", "pattern": "^R[0-9]{2}$", "description": "Rule identifier R01..R99 as named in 06-behavior-simulation.md." },
     "rect": { "type": "object", "required": ["x", "y", "w", "h"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "w": { "type": "number" }, "h": { "type": "number" } } }
   }
 }

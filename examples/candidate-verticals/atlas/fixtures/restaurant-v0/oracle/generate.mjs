@@ -25,7 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-const ORACLE_VERSION = 'oracle-0.1.0';
+const ORACLE_VERSION = 'oracle-0.1.0'; // label kept at 0.1.0 after CCR-002 so simulated-event provenance stays byte-identical; see manifest.hash_rule + CHANGELOG
 const here = path.dirname(new URL(import.meta.url).pathname);
 const root = path.resolve(here, '..');
 const CHECK = process.argv.includes('--check');
@@ -393,6 +393,22 @@ function normalize(raw, branch) {
 
 // ───────────────────────── snapshots ─────────────────────────
 function sha256(x) { return crypto.createHash('sha256').update(typeof x === 'string' ? x : JSON.stringify(x)).digest('hex'); }
+// XAS-CANON-1 canonical JSON (port of signet/src/canon.ts; no import): NFC strings, keys sorted by code point at every
+// level, no whitespace, shortest round-trip numbers, non-finite rejected, undefined fields omitted, undefined in arrays rejected.
+function canonicalJson(v) {
+  if (v === null) return 'null';
+  const t = typeof v;
+  if (t === 'string') return JSON.stringify(v.normalize('NFC'));
+  if (t === 'number') { if (!Number.isFinite(v)) throw new Error('XAS-CANON-1: non-finite number'); return JSON.stringify(v); }
+  if (t === 'boolean') return v ? 'true' : 'false';
+  if (t === 'undefined') throw new Error('XAS-CANON-1: undefined value');
+  if (Array.isArray(v)) return '[' + v.map(x => { if (x === undefined) throw new Error('XAS-CANON-1: undefined in array'); return canonicalJson(x); }).join(',') + ']';
+  if (t === 'object') return '{' + Object.keys(v).filter(k => v[k] !== undefined).sort().map(k => JSON.stringify(k.normalize('NFC')) + ':' + canonicalJson(v[k])).join(',') + '}';
+  throw new Error('XAS-CANON-1: unsupported type ' + t);
+}
+// state_hash = sha256(canonicalJson({state, metrics})) per 04-time.md. CCR-002 (2026-10-07): oracle-0.1.0 hashed
+// JSON.stringify output (insertion key order); re-stamped once here.
+function stateHash(state, metrics) { return crypto.createHash('sha256').update(canonicalJson({ state, metrics }), 'utf8').digest('hex'); }
 function reduceTo(log, t) { const s = createState(); let n = 0; for (const e of log) { if (e.t > t) break; applyEvent(s, e); n++; } s.t = t; return { s, n }; }
 function snapshot({ id, log, t, branch, mode, claim_class, title, narrative }) {
   const { s, n } = reduceTo(log, t);
@@ -418,7 +434,7 @@ function snapshot({ id, log, t, branch, mode, claim_class, title, narrative }) {
     last_measurements: Object.fromEntries(s.measurements.filter(x => x.t <= t).map(x => [x.subject + ':' + x.metric, { value: x.value, ts: iso(x.t) }])),
   };
   const snap = { atlas_schema: 'atlas-snapshot/0.1', id, title, world: world.metadata.id, branch, mode, claim_class, t, ts: iso(t), engine: ORACLE_VERSION, narrative, state, metrics: m, diagnosis: diag, evidence_refs: evidence };
-  snap.state_hash = sha256(JSON.stringify({ state: snap.state, metrics: snap.metrics }));
+  snap.state_hash = stateHash(snap.state, snap.metrics);
   return snap;
 }
 
@@ -533,7 +549,7 @@ function main() {
   put('expected/comparison.json', comparison);
 
   // manifest
-  const manifest = { generated_by: ORACLE_VERSION, world: world.metadata.id, world_sha256: sha256(fs.readFileSync(path.join(root, 'world.restaurant-v0.json'), 'utf8')), scenario_sha256: sha256(fs.readFileSync(path.join(root, 'scenario.fry-rush.json'), 'utf8')), seeds: { day1: 20261006, day2: 20261007 }, counts: { day1_events: ledger1.length, day1_orders: truth1.filter(e => e.type === 'ORDER_CREATED').length, day2_events: ledger2.length, sim_baseline_events: base.events_generated, sim_scenario_events: scn.events_generated }, files: Object.fromEntries(Object.entries(files).sort().map(([k, v]) => [k, sha256(v)])) };
+  const manifest = { generated_by: ORACLE_VERSION, hash_rule: 'XAS-CANON-1', world: world.metadata.id, world_sha256: sha256(fs.readFileSync(path.join(root, 'world.restaurant-v0.json'), 'utf8')), scenario_sha256: sha256(fs.readFileSync(path.join(root, 'scenario.fry-rush.json'), 'utf8')), seeds: { day1: 20261006, day2: 20261007 }, counts: { day1_events: ledger1.length, day1_orders: truth1.filter(e => e.type === 'ORDER_CREATED').length, day2_events: ledger2.length, sim_baseline_events: base.events_generated, sim_scenario_events: scn.events_generated }, files: Object.fromEntries(Object.entries(files).sort().map(([k, v]) => [k, sha256(v)])) };
 
   if (CHECK) {
     const old = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));

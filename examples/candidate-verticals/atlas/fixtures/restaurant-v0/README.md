@@ -49,8 +49,10 @@ observed (OVERLOADED, queue 16, wait 857 s, 933 s).
 ## Invariants the fixtures encode (and tests must keep)
 
 1. Normalizing `raw/` reproduces the engine's own event log exactly (the oracle asserts this).
-2. `state_hash` in each snapshot = sha256 of `JSON.stringify({state, metrics})` as emitted
-   (the real engine must use XAS-CANON-1 canonical JSON; M1 re-stamps hashes once, with a reason).
+2. `state_hash` in each snapshot = sha256 of XAS-CANON-1 canonical JSON of `{state, metrics}`
+   (sorted keys, no whitespace, shortest round-trip numbers), per `04-time.md`. Re-stamped once
+   on 2026-10-07 under CCR-002 (`manifest.json → hash_rule`); before that the oracle hashed
+   `JSON.stringify` output in insertion key order.
 3. `history:day1` contains no `simulated` events; `sim:*` contains only `simulated` events plus replayed `observed` arrivals.
 4. Both sim branches contain identical `ORDER_CREATED` events.
 5. Tie ordering is `(t, type rank, subject, work_id)`; queue order is `(queued_t, order created_t, work_id)`.
