@@ -1,6 +1,6 @@
 # ATLAS — V0 Product & Technical Specification
 
-**Status:** Design specification (PLAN → SPEC complete; BUILD not started)
+**Status:** Design specification, FROZEN as the V0 reference contract on 2026-10-07 (see 15). BUILD not started.
 **Execution:** Not implemented. The only code here is a fixture oracle.
 **Scope:** A standalone PROBE that may later join SignalWorks. It has its own architecture.
 **Produced:** 2026-10-07 from the "ATLAS — Master Product & Architecture Brief"
@@ -67,6 +67,7 @@ If step 4 fails, it is a dashboard. V0 is built to make step 4 impossible to fak
 | [12-testing.md](12-testing.md) | Test strategy by category |
 | [13-risks-decisions.md](13-risks-decisions.md) | Risks with mitigations; decisions needed before a builder starts |
 | [14-novel-mechanisms.md](14-novel-mechanisms.md) | Mechanisms to document as implementation evidence accumulates |
+| [15-v0-contract-and-muse-handoff.md](15-v0-contract-and-muse-handoff.md) | **Frozen V0 contract**, contract-change process, oracle independence, SignalWorks boundary, Muse Milestone 1 |
 | [schema/](schema/) | JSON Schemas: world definition, event, snapshot |
 | [fixtures/restaurant-v0/](fixtures/restaurant-v0/README.md) | The synthetic restaurant: world, scenario, raw sources, ledger, four canonical snapshots, expected simulation results, calibration day |
 
