@@ -1,0 +1,146 @@
+{
+  "generated": "2026-10-07T14:31:48.239Z",
+  "engine": "atlas-impl/0.2.0",
+  "reference": "cae5adf",
+  "checks": [
+    {
+      "name": "scenario loads and validates",
+      "pass": true,
+      "detail": "id=scn_fry_rush_reassign_emp04"
+    },
+    {
+      "name": "baseline: base_state_hash == s3",
+      "pass": true
+    },
+    {
+      "name": "baseline: events_applied == 544",
+      "pass": true
+    },
+    {
+      "name": "baseline: event count",
+      "pass": true,
+      "detail": "872"
+    },
+    {
+      "name": "baseline: first seq",
+      "pass": true,
+      "detail": "545"
+    },
+    {
+      "name": "baseline: workload_sha256",
+      "pass": true
+    },
+    {
+      "name": "baseline: trace_content_sha256",
+      "pass": true
+    },
+    {
+      "name": "baseline: final_state_hash",
+      "pass": true
+    },
+    {
+      "name": "baseline: receipt_sha256 recomputes",
+      "pass": true
+    },
+    {
+      "name": "scenario: base_state_hash == s3",
+      "pass": true
+    },
+    {
+      "name": "scenario: events_applied == 544",
+      "pass": true
+    },
+    {
+      "name": "scenario: event count",
+      "pass": true,
+      "detail": "994"
+    },
+    {
+      "name": "scenario: first seq",
+      "pass": true,
+      "detail": "545"
+    },
+    {
+      "name": "scenario: workload_sha256",
+      "pass": true
+    },
+    {
+      "name": "scenario: trace_content_sha256",
+      "pass": true
+    },
+    {
+      "name": "scenario: final_state_hash",
+      "pass": true
+    },
+    {
+      "name": "scenario: receipt_sha256 recomputes",
+      "pass": true
+    },
+    {
+      "name": "baseline: snapshot state_hash",
+      "pass": true
+    },
+    {
+      "name": "baseline: snapshot state",
+      "pass": true
+    },
+    {
+      "name": "baseline: snapshot metrics",
+      "pass": true
+    },
+    {
+      "name": "baseline: snapshot diagnosis",
+      "pass": true
+    },
+    {
+      "name": "scenario: snapshot state_hash",
+      "pass": true
+    },
+    {
+      "name": "scenario: snapshot state",
+      "pass": true
+    },
+    {
+      "name": "scenario: snapshot metrics",
+      "pass": true
+    },
+    {
+      "name": "scenario: snapshot diagnosis",
+      "pass": true
+    },
+    {
+      "name": "comparison operational subset == expected",
+      "pass": true
+    },
+    {
+      "name": "calibration operational subset == expected, comparable",
+      "pass": true
+    },
+    {
+      "name": "deterministic rerun",
+      "pass": true
+    }
+  ],
+  "arms": {
+    "baseline": {
+      "run_id": "run_e8a2064271e4acd8",
+      "receipt_sha256": "70a12ce6a982996a7e971dcd04cee4b2c867475e5b19d4937fc6338b13beea68",
+      "events": 872,
+      "trace_sha256": "9fdda92f80046f7b20133ab0b0ec5c125dbcda6f5fedb3a32c5c52ec70f1b732",
+      "trace_content_sha256": "9c4089b7e6682ea7df701856e31cf593c423f14f3e7642ccc6927daa8c684f9b",
+      "final_state_hash": "176e0d643322b0d15fbb3fb28a19c3d9bdb5c18d1d185d0c67c4399092b43b42",
+      "window_metrics_sha256": "7df53c250fe2cd6f57e6dfc85d04f2318774af4e790d4861b982cdc00f930d78"
+    },
+    "scenario": {
+      "run_id": "run_720bb5fe3a1bd061",
+      "receipt_sha256": "e8aaf5a55e5330e218298824cdbc7ce1e1960a16176d39a77cb91ff66425d633",
+      "events": 994,
+      "trace_sha256": "cd7f9d1850695c1f245d969531ee86bdb75c968cdf03106b7dca9636e6b5e714",
+      "trace_content_sha256": "97e0d1fbb4e329df31f7dee08d09b2f945b217f6c5ecfa30f0ce10009b710ede",
+      "final_state_hash": "e11f66e8eb0389b57427da2515ff7f5f0d41c7708b9073a1a3e874de0ec9d279",
+      "window_metrics_sha256": "6c9aaa2fe613b7b496a768317d6ad6eb4c02e7081ff0a0a6ab5d4a63bc15f24f"
+    }
+  },
+  "workload_sha256": "ae7ad2b264fc003cd70413c2e0ad96baa726861ace6f85d6aab9258880bd471d",
+  "overall": "PASS"
+}

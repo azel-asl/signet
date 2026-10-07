@@ -120,7 +120,7 @@ function percentile(sorted: number[], p: number): number | null {
   return sorted[k - 1];
 }
 
-function kitchenTarget(world: World): number {
+export function kitchenTarget(world: World): number {
   const g = world.goals.find((x) => x.id === 'g_kitchen_time');
   if (!g) throw new Error('world is missing goal g_kitchen_time');
   return g.target;

@@ -1,26 +1,46 @@
-# ATLAS V0 implementation (Muse, Milestone 1: world + replay parity)
+# ATLAS V0 implementation (Muse, Milestones 1–2)
 
 Independent TypeScript runtime implementing the frozen ATLAS V0 contract
-(`../15-v0-contract-and-muse-handoff.md`) against the frozen fixtures in
-`../fixtures/restaurant-v0/`. Written from the specification (03–06); the Fable
-oracle was read only to resolve ambiguities (see `DECISIONS.md`). No oracle code
-is imported, copied, or transplanted — a regression test enforces this.
+(`../15-v0-contract-and-muse-handoff.md`, `../16-m2-counterfactual-contract-and-muse-handoff.md`)
+against the frozen fixtures in `../fixtures/restaurant-v0/`. Written from the
+specification (03–06, 16); the Fable oracle was read only to resolve ambiguities
+(see `DECISIONS.md`). No oracle code is imported, copied, or transplanted — a
+regression test enforces this.
+
+Milestone 2 (counterfactual simulation) is implemented per the frozen M2 contract
+(`cae5adf`): pre-M2 corrections B1 (positional checkpoint cursor) and B2
+(XAS-CANON-1 conformance), scenario validation, deterministic scheduler, branch
+ledgers, run receipts, window metrics, comparison, calibration, and the JSON
+capability facade. CCR-003 remains deferred.
 
 ## Layout
 
-- `src/canon.ts` — XAS-CANON-1 canonical JSON + sha256 (`state_hash`).
+### M1 modules
+- `src/canon.ts` — XAS-CANON-1 canonical JSON + sha256 (`state_hash`); faithful
+  behavioral port of Signet's canonValue (B2), no Signet dependency.
 - `src/schema.ts` — strict JSON Schema validator (subset used by the V0 schemas).
 - `src/world.ts` — `loadWorld`: schema + 03 semantic checks, JSON-pointer errors.
 - `src/ledger.ts` — `loadLedger`: NDJSON parse, per-line validation, reduction order.
-- `src/reducer.ts` — `createState`, `applyEvent`, `reduceTo` (pure, deterministic).
+- `src/reducer.ts` — `createState`, `applyEvent`, `reduceTo` (pure, deterministic);
+  B1 positional checkpoint cursor (`StaleCheckpointError`, `UnorderedLedgerError`).
 - `src/views.ts` — capacity (R01), status (R07), utilization, metrics, diagnosis,
   evidence refs, snapshot assembly.
-- `src/checkpoints.ts` — checkpoint write/resume (pure cache, 04).
+- `src/checkpoints.ts` — checkpoint write/resume (pure cache, 04, 16 §B1).
 - `src/parity.ts` — expected-vs-actual comparison with first-differing-path diffs.
-- `scripts/parity.ts` — parity runner; writes `reports/parity-report.{json,md}`.
-- `test/` — 68 tests: canon, schema, reducer, views, replay, provenance,
-  checkpoints, regression.
-- `fixtures/invalid/` — the six invalid world variants (M2).
+- `scripts/parity.ts` — M1 parity runner; writes `reports/parity-report.{json,md}`.
+
+### M2 modules
+- `src/scenario.ts` — scenario load + validation (17 D2 codes), `ScenarioError`.
+- `src/branch.ts` — branch identity (`BranchPoint`), branch-log construction (E3).
+- `src/scheduler.ts` — deterministic scheduler (E2 adoption, E5 instants); emits
+  events only; scratch state advances via injected `apply` (default `applyEvent`).
+- `src/simulate.ts` — arms, E6 event numbering (D4), D5 run receipts, workload.
+- `src/window.ts` — D6 operational window metrics (CCR-004 sampling).
+- `src/compare.ts` — D7 counterfactual comparison, D8 calibration.
+- `src/capabilities.ts` — D9 JSON-in/JSON-out capability facade.
+- `scripts/m2-parity.ts` — M2 parity runner; writes `reports/m2-parity-report.{json,md}`.
+- `test/` — 175 tests: M1 suite + B1/B2 + F2–F13.
+- `fixtures/invalid/` — the six invalid world variants.
 - `reports/` — generated parity reports.
 
 Contract-change requests live one level up in `../contract-changes/`.

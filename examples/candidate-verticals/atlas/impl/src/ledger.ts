@@ -44,7 +44,7 @@ export function compareKeys(a: OrderKey, b: OrderKey): number {
   return 0;
 }
 
-export function sortByReductionOrder(events: AtlasEvent[]): AtlasEvent[] {
+export function sortByReductionOrder<T extends Pick<AtlasEvent, 't' | 'type' | 'subject' | 'data'>>(events: T[]): T[] {
   return [...events].sort((a, b) => compareKeys(reductionKey(a), reductionKey(b)));
 }
 

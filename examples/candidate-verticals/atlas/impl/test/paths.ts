@@ -14,6 +14,7 @@ export const EVENT_SCHEMA = path.join(SCHEMA_DIR, 'atlas-event.schema.json');
 export const SNAPSHOT_SCHEMA = path.join(SCHEMA_DIR, 'atlas-snapshot.schema.json');
 export const WORLD_FILE = path.join(FIX, 'world.restaurant-v0.json');
 export const LEDGER_FILE = path.join(FIX, 'normalized', 'events.ndjson');
+export const SCENARIO_FILE = path.join(FIX, 'scenario.fry-rush.json');
 
 export const CANONICAL = [
   { fixture: 'snapshots/s1_normal.json', hhmm: '17:45' },

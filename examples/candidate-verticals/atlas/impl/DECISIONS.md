@@ -99,3 +99,47 @@ hash emission (D10), event ordering ranks (D4), and `createState` initialization
 Also read `15-v0-contract-and-muse-handoff.md` §2/§8 and the fixture README for the
 PASS WHEN criteria. No oracle code appears in `src/`; a lint test asserts no
 `/oracle/` import path exists in the implementation or tests.
+
+## D14 — M2: scheduler emits events; reducer publishes state (16 §C, §E)
+Source: 16-m2-counterfactual-contract-and-muse-handoff.md §C/E. The scheduler keeps a
+private scratch WorldState advanced ONLY by the injected `apply` (default: `applyEvent`
+from reducer.ts). It never writes state collections directly (a test scans
+scheduler.ts for write patterns). Every published snapshot, metric and hash is
+computed by `reduceTo` over the branch log. The oracle traces were inspected as
+fixtures (expected/sim_*.events.ndjson) to confirm the E5 instant procedure;
+no oracle scheduler code was transplanted.
+
+## D15 — M2: branch-log tB sample includes branch tB events
+Source: 06-behavior-simulation.md window-metrics text (CCR-004). Sample points are
+the settled state at tB then each instant in (tB, tH]. For a branch log,
+`reduceTo(branchLog, tB)` naturally includes the branch's tB-instant events
+(adoption completions, interventions at tB, tB dispatch). Verified: the observed
+calibration reproduces the expected 4200s Fry overloaded time, and both arms'
+window metrics match expected/comparison.json exactly.
+
+## D16 — M2: F2 "shared prefix" reads as the parent prefix
+Source: 16 §F2. The literal `reduceTo(branchLog, tB) == reduceTo(history, tB)` cannot
+hold because E5 emits branch events at tB (first instant is always tB). The test
+verifies the intent: the branch log's first 544 entries are exactly the parent
+prefix, and reducing the prefix equals reducing history. Not filed as a CCR:
+the semantics are unambiguous, only the test phrasing is loose.
+
+## D17 — M2: work-id minting follows the adapter convention
+Source: 16 §B/CCR-003. Simulated work ids are `w_<order without "o_">_<item_seq>_<step>`
+(e.g. `w_0039_1_prep`, `w_0031_0_pass`). Same convention the history adapter uses.
+CCR-003 remains deferred; scenario validation calls the same `stationShortName`
+the world loader uses (one implementation, asserted by test).
+
+## D18 — M2: no economics, no second domain, no SignalWorks
+Source: 16 §13, §15, §18. WindowMetrics excludes revenue/cost fields. The capability
+facade (capabilities.ts) is JSON-in/JSON-out only; SignalWorks is not integrated.
+ENGINE_VERSION = 'atlas-impl/0.2.0'.
+
+## Oracle-read log (M2)
+Read `fixtures/restaurant-v0/expected/sim_baseline.events.ndjson` and
+`sim_scenario.events.ndjson` (fixtures, not oracle code) to confirm: the E5 instant
+procedure (timers → inputs → dispatch), the tB-first-instant rule, work-id
+minting, intervention event shape (`reason: 'intervention:<id>'`), replayed-arrival
+provenance (`claim_class: observed` + note), and the reduction-order sort for E6
+numbering. The frozen `comparison.json` confirmed the window-metrics sampling
+(CCR-004) and the §H comparison mapping. No oracle code appears in `src/`.
