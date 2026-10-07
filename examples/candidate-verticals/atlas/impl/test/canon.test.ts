@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalJson, canonicalize, sha256Hex, stateHash } from '../src/canon.js';
+import { canonicalJson, sha256Hex, stateHash } from '../src/canon.js';
 
 describe('canonicalJson (XAS-CANON-1)', () => {
   it('sorts object keys recursively', () => {
@@ -27,10 +27,18 @@ describe('canonicalJson (XAS-CANON-1)', () => {
     expect(canonicalJson({ r: 575.5 })).toBe('{"r":575.5}');
   });
 
-  it('canonicalize does not mutate its input', () => {
+  it('canonicalJson does not mutate its input', () => {
     const v = { b: 1, a: 2 };
-    canonicalize(v);
+    canonicalJson(v);
     expect(Object.keys(v)).toEqual(['b', 'a']);
+  });
+
+  it('omits undefined object fields, throws on undefined values and non-finite numbers', () => {
+    expect(canonicalJson({ a: 1, b: undefined })).toBe('{"a":1}');
+    expect(() => canonicalJson(undefined)).toThrow(/^XAS-CANON-1:/);
+    expect(() => canonicalJson({ a: [1, undefined] })).toThrow(/^XAS-CANON-1:/);
+    expect(() => canonicalJson(NaN)).toThrow(/^XAS-CANON-1:/);
+    expect(() => canonicalJson(Infinity)).toThrow(/^XAS-CANON-1:/);
   });
 });
 

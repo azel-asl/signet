@@ -1,6 +1,6 @@
 # ATLAS V0 Milestone 1 — parity report
 
-Generated 2026-10-07T14:19:24.540Z · engine atlas-impl/0.1.0 · reference cd0db9e · world restaurant-v0 · branch history:day1
+Generated 2026-10-07T14:20:52.938Z · engine atlas-impl/0.1.0 · reference cd0db9e · world restaurant-v0 · branch history:day1
 World validation: PASS · manifest.hash_rule: XAS-CANON-1
 Ledger: 1815 events (committed order matched reduction order: true) · checkpoints: 9
 
