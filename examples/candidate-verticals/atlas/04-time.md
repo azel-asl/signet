@@ -29,9 +29,10 @@ Within a `history:*` ledger, `seq` equals this order after a batch ingest. In LI
 
 ```
 reduceTo(world, ledger, T):
-  cp = ledger.nearestCheckpoint(T)           // checkpoint.t <= T, or null
-  state = cp ? cp.state : createState(world)
-  for e in ledger.read({from: cp?.t, to: T}) in reduction order, skipping e.t <= cp.t:
+  events = ledger in reduction order            // history: sorted by key; branch: parent prefix ++ branch events (see 16)
+  cp = nearestCheckpoint(T)                     // checkpoint.t <= T, latest ledger_pos, or null
+  state = cp ? clone(cp.state) : createState(world)
+  for e in events starting at position cp?.ledger_pos ?? 0, while e.t <= T:
       state = applyEvent(state, e)
   state.t = T
   return state
@@ -42,8 +43,12 @@ no I/O. Reconstruction never consults a rendered frame or a previous snapshot's 
 
 ## Checkpoints
 
-A checkpoint is `{t, state, ledger_seq, state_hash}` written every N events (N = 500 in V0)
-and at every `EQUIPMENT_STATE_CHANGED` or `ASSIGNMENT_CHANGED`. Checkpoints are a cache:
+A checkpoint is `{t, ledger_pos, last_event_id, state, state_hash}` written every N events
+(N = 500 in V0) and at every `EQUIPMENT_STATE_CHANGED` or `ASSIGNMENT_CHANGED`. `ledger_pos` is
+the number of events already applied **in reduction order** (the resume index), not `seq`,
+because `seq` is file position and need not equal reduction order (amended 2026-10-07, see 16 §B1).
+A checkpoint is bound to the exact ordered event array it was built from; resuming verifies
+`events[ledger_pos − 1].event_id = last_event_id` and refuses a stale checkpoint. Checkpoints are a cache:
 deleting them changes nothing but speed, and a test asserts `reduceTo` with and without
 checkpoints gives the same hash. Snapshots are checkpoints plus views, kept only when a
 user or a test asks for them.

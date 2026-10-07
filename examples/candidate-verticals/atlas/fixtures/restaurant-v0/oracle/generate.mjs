@@ -184,20 +184,22 @@ function makeEngine(s, { durationOf, emit }) {
   }
   function run({ from, until, arrivals, scheduled }) {
     const external = [...arrivals, ...scheduled].filter(e => e.t >= from && e.t <= until).sort(byLedgerOrder);
-    let ei = 0, t = from;
-    dispatch(t);
+    // Uniform instant rule (M2 contract §E): every instant, including the branch instant `from`, runs
+    // completions -> external inputs -> dispatch. `from` is always processed, even with no timer or input on it.
+    let ei = 0, t = from, first = true;
+    const timerCmp = (a, b) => a.t - b.t || (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0) || ((a.work_id ?? a.order_id) < (b.work_id ?? b.order_id) ? -1 : (a.work_id ?? a.order_id) > (b.work_id ?? b.order_id) ? 1 : 0);
     while (true) {
-      timers.sort((a, b) => a.t - b.t || (a.kind > b.kind ? 1 : -1) || ((a.work_id ?? a.order_id) > (b.work_id ?? b.order_id) ? 1 : -1));
+      timers.sort(timerCmp);
       const nextTimer = timers.length ? timers[0].t : Infinity;
       const nextExt = ei < external.length ? external[ei].t : Infinity;
-      t = Math.min(nextTimer, nextExt);
+      t = first ? from : Math.min(nextTimer, nextExt); first = false;
       if (t === Infinity || t > until) break;
       // completions first, then external events (equipment/assignments/arrivals) in rank order, then dispatch
       while (timers.length && timers[0].t === t) {
         const tm = timers.shift();
         if (tm.kind === 'complete') { push({ t, type: 'WORK_COMPLETED', subject: s.work[tm.work_id].order_id, data: { work_id: tm.work_id, station_id: s.work[tm.work_id].station_id } }); onWorkCompleted(t, tm.work_id); }
         else push({ t, type: 'ORDER_COMPLETED', subject: tm.order_id, data: { order_id: tm.order_id } });
-        timers.sort((a, b) => a.t - b.t);
+        timers.sort(timerCmp);
       }
       while (ei < external.length && external[ei].t === t) { const e = external[ei++]; push(e); if (e.type === 'ORDER_CREATED') onOrderCreated(t, e); }
       dispatch(t);
@@ -461,9 +463,17 @@ function windowMetrics(log, tB, tH) {
   const kt = done.map(o => o.completed_t - o.created_t).sort((a, b) => a - b);
   const target = world.goals.find(g => g.id === 'g_kitchen_time').target;
   // max fry queue and time overloaded
-  const tmp = createState(); let maxQ = { st_fry: 0, st_prep: 0 }, overloaded_s = { st_fry: 0, st_prep: 0 }, lastT = tB, lastStatus = {};
-  for (const e of log) { if (e.t > tH) break; if (e.t > tB) { for (const st of ['st_fry', 'st_prep']) if (lastStatus[st] === 'OVERLOADED') overloaded_s[st] += e.t - lastT; lastT = e.t; } applyEvent(tmp, e); if (e.t >= tB) for (const st of ['st_fry', 'st_prep']) { maxQ[st] = Math.max(maxQ[st], tmp.stations[st].queue.length); lastStatus[st] = stationStatus(tmp, st, e.t); } }
-  for (const st of ['st_fry', 'st_prep']) if (lastStatus[st] === 'OVERLOADED') overloaded_s[st] += tH - lastT;
+  // CCR-004: sample the settled state at tB, then the settled state at the end of every instant in (tB, tH]
+  // that has events; a sampled status holds until the next sample point (or tH). oracle-0.1.0 skipped tB
+  // when no event fell exactly on it, undercounting overloaded time before the first post-branch event.
+  const WS = ['st_fry', 'st_prep'];
+  const tmp = createState(); const maxQ = { st_fry: 0, st_prep: 0 }, overloaded_s = { st_fry: 0, st_prep: 0 };
+  const samples = []; let li = 0;
+  const sample = (t) => samples.push({ t, q: Object.fromEntries(WS.map(st => [st, tmp.stations[st].queue.length])), s: Object.fromEntries(WS.map(st => [st, stationStatus(tmp, st, t)])) });
+  for (; li < log.length && log[li].t <= tB; li++) applyEvent(tmp, log[li]);
+  sample(tB);
+  while (li < log.length && log[li].t <= tH) { const t = log[li].t; while (li < log.length && log[li].t === t) applyEvent(tmp, log[li++]); sample(t); }
+  samples.forEach((p, k) => { const end = k + 1 < samples.length ? samples[k + 1].t : tH; for (const st of WS) { maxQ[st] = Math.max(maxQ[st], p.q[st]); if (p.s[st] === 'OVERLOADED') overloaded_s[st] += end - p.t; } });
   const delayMin = done.reduce((a, o) => a + Math.max(0, (o.completed_t - o.created_t) - target) / 60, 0);
   const rate = world.economics.delay_cost_per_order_minute_over_target.value;
   return {

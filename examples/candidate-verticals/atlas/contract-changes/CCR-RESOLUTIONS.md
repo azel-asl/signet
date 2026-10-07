@@ -44,3 +44,14 @@ against the frozen reference commit `b8c899c` only.
   world and scenario are byte-identical. Hash contract and schema versions unchanged.
 - Oracle version label kept at `oracle-0.1.0` (a bump would rewrite `provenance.adapter` in
   1,866 simulated events, which is content churn unrelated to the defect).
+
+## CCR-004 — window metrics skip the branch-point state (raised by spec owner during M2 design)
+
+**Decision: ACCEPT.** `windowMetrics` sampled station status only after events with `t ≥ tB`,
+so when no event falls exactly on `tB` the interval from `tB` to the first later event was never
+counted. Observed day 1 has no event at 18:20:00 and Fry was already OVERLOADED there, so
+`overloaded_seconds.st_fry` read 4,197 instead of 4,200. Simulated branches always have events at
+`tB` and were unaffected. Fix: sample the settled state at `tB`, then the settled state at the end
+of every instant in `(tB, tH]`. Verified that per-event and end-of-instant sampling give identical
+values on all three fixture logs, so end-of-instant is adopted as the cleaner definition with no
+other value moving. One expected value changed (calibration only). No schema change.

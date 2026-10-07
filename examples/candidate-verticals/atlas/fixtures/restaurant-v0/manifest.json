@@ -22,7 +22,7 @@
     "day2/raw/pos_orders.csv": "47e400bb4ae0673c8a3e17dd53fecbbfb35bcae1f3142f0a48d8073c504d5b25",
     "day2/raw/shift_notes.csv": "ae4bb7a38f0d73fb72e02c46993a8ed7c7faa87d0a46d0f453ce6d48167c4c0e",
     "day2/raw/staff_events.csv": "8c45b59a7daf1a5d86cebf8e89905f926a4de0cf81dd00aad943214c8a2ecb79",
-    "expected/comparison.json": "03faa50824c8e6d476d5740f7e24184658c89d9b10230bf6be0861726a980bc2",
+    "expected/comparison.json": "e05cce5ac12097f4e8b021db3fe664a25116db2d55ad986e3462d271d6d0d951",
     "expected/s4_observed_reference.json": "accf80d314f6513a2524c4446eb00c6a2aad41705d5a94a0ba23de98d32ac9c4",
     "expected/s4b_simulated_baseline.json": "244b70998d3084f1400e7feccd7cc5492731d523223eadcb5c0c33f023896b97",
     "expected/sim_baseline.events.ndjson": "261ecc36f11827adab7215f719d5ec92d4b8b942f80b890ab855b20613950193",

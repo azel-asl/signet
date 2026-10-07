@@ -42,9 +42,9 @@ The reducer accepts any order of these events (history can be messy) and records
 run(state, from, until, arrivals, scheduled, durationOf):
   timers = adoptInProgress(state, from)              // see 04-time.md branch semantics
   external = sort(arrivals ∪ scheduled, reduction order)
-  dispatch(from)
   loop:
-    t = min(next timer.t, next external.t); stop if none or t > until
+    t = first iteration ? from : min(next timer.t, next external.t); stop if none or t > until
+                                                     // `from` is always an instant, even with no input on it (16 §E)
     for each timer at t (sorted by t, kind, id):      // completions first
         complete: emit WORK_COMPLETED; then onWorkCompleted
         handoff:  emit ORDER_COMPLETED
@@ -98,7 +98,10 @@ or oldest wait ≥ 240 s.
 Window metrics for a comparison window `(tB, tH]`: membership is orders **created**
 inside the window; `orders_completed` counts those also completed by `tH`;
 `throughput_per_hour = completed / hours`; kitchen-time statistics over the completed
-subset; `max_queue` and `overloaded_seconds` per station integrated over the window;
+subset; `max_queue` and `overloaded_seconds` per station over **sample points**: the settled
+state at `tB`, then the settled state at the end of every instant in `(tB, tH]` that has events;
+a sampled status holds until the next sample point or `tH` (CCR-004; event-sampled, so a
+wait crossing the threshold between events is counted from the next event);
 `revenue_completed_in_window`, `revenue_open_at_horizon`, `delay_minutes_over_target`,
 `delay_cost_assumed`, `labor_cost_in_window`.
 
