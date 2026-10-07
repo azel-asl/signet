@@ -155,7 +155,11 @@ export interface EvidenceRef {
 
 export interface Checkpoint {
   t: Seconds;
+  /** Count of events already applied, counted in the ordered event array the
+   * checkpoint was built from. Resume starts at this index. (B1: positional cursor) */
+  ledger_pos: number;
+  /** event_id of events[ledger_pos - 1]; guards against a stale checkpoint. */
+  last_event_id: string;
   state: WorldState;
-  ledger_seq: number;
   state_hash: string;
 }

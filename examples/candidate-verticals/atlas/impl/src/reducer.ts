@@ -163,10 +163,33 @@ export interface ReduceResult {
   eventsApplied: number;
 }
 
+/** Thrown when a checkpoint's cursor no longer matches the event array. */
+export class StaleCheckpointError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StaleCheckpointError';
+  }
+}
+
+/** Thrown when the event array passed to reduceTo is not in non-decreasing t. */
+export class UnorderedLedgerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnorderedLedgerError';
+  }
+}
+
 /**
- * reduceTo(world, ledger, T): reconstruct the WorldState at time T (04).
- * Optionally resumes from a checkpoint (checkpoint.t <= T); events with
- * seq <= checkpoint.ledger_seq are skipped via the checkpoint cursor.
+ * reduceTo(world, events, T, cp?): reconstruct the WorldState at time T (04, 16 §B1).
+ *
+ * `events` must be in canonical order (reduction order for a history ledger;
+ * parent-prefix-then-branch for a branch log). The walk asserts non-decreasing
+ * t and throws UnorderedLedgerError otherwise.
+ *
+ * If `cp` is given, resume starts at index cp.ledger_pos; the cursor is
+ * verified (cp.ledger_pos <= events.length and
+ * events[cp.ledger_pos - 1].event_id === cp.last_event_id) and a mismatch
+ * throws StaleCheckpointError. There is no silent fallback.
  */
 export function reduceTo(
   world: World,
@@ -174,12 +197,40 @@ export function reduceTo(
   t: Seconds,
   checkpoint?: Checkpoint,
 ): ReduceResult {
-  const s = checkpoint ? cloneState(checkpoint.state) : createState(world);
-  const skipSeq = checkpoint ? checkpoint.ledger_seq : 0;
-  let n = checkpoint ? checkpoint.ledger_seq : 0;
-  for (const e of events) {
+  let start = 0;
+  let n = 0;
+  let s: WorldState;
+  if (checkpoint) {
+    if (checkpoint.ledger_pos > events.length) {
+      throw new StaleCheckpointError(
+        `checkpoint ledger_pos ${checkpoint.ledger_pos} exceeds event array length ${events.length}`,
+      );
+    }
+    if (
+      checkpoint.ledger_pos > 0 &&
+      events[checkpoint.ledger_pos - 1].event_id !== checkpoint.last_event_id
+    ) {
+      throw new StaleCheckpointError(
+        `checkpoint stale: event at position ${checkpoint.ledger_pos} is ` +
+        `'${events[checkpoint.ledger_pos - 1].event_id}', expected '${checkpoint.last_event_id}'`,
+      );
+    }
+    s = cloneState(checkpoint.state);
+    start = checkpoint.ledger_pos;
+    n = checkpoint.ledger_pos;
+  } else {
+    s = createState(world);
+  }
+  let prevT = -Infinity;
+  for (let i = start; i < events.length; i++) {
+    const e = events[i];
+    if (e.t < prevT) {
+      throw new UnorderedLedgerError(
+        `event array not in non-decreasing t: event ${e.event_id} has t=${e.t} after t=${prevT} (index ${i})`,
+      );
+    }
+    prevT = e.t;
     if (e.t > t) break;
-    if (e.seq <= skipSeq) continue;
     applyEvent(s, e);
     n++;
   }

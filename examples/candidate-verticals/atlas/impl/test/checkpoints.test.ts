@@ -21,15 +21,17 @@ describe('checkpoints', () => {
     const ledger = await ledgerP;
     const cps = buildCheckpoints(world, ledger.events);
     expect(cps.length).toBeGreaterThan(0);
-    // every checkpoint resumes exactly at a ledger event
-    const seqs = new Set(ledger.events.map((e) => e.seq));
+    // the positional cursor is bound to the ordered array: last_event_id is
+    // the event at index ledger_pos - 1
     for (const cp of cps) {
-      expect(seqs.has(cp.ledger_seq)).toBe(true);
+      expect(cp.ledger_pos).toBeGreaterThan(0);
+      expect(cp.ledger_pos).toBeLessThanOrEqual(ledger.events.length);
+      expect(ledger.events[cp.ledger_pos - 1].event_id).toBe(cp.last_event_id);
       expect(cp.state_hash).toMatch(/^[0-9a-f]{64}$/);
     }
-    // checkpoints are ordered by (t, ledger_seq)
+    // checkpoints are ordered by (t, ledger_pos)
     for (let i = 1; i < cps.length; i++) {
-      expect(cps[i].t > cps[i - 1].t || cps[i].ledger_seq > cps[i - 1].ledger_seq).toBe(true);
+      expect(cps[i].t > cps[i - 1].t || cps[i].ledger_pos > cps[i - 1].ledger_pos).toBe(true);
     }
   });
 
@@ -72,9 +74,9 @@ describe('checkpoints', () => {
     const at = nearestCheckpoint(cps, first.t);
     // several checkpoints can share the same t (e.g. shift-start assignments);
     // the nearest is the one with the greatest ledger_seq at that t.
-    const maxSeqAtT = Math.max(...cps.filter((c) => c.t === first.t).map((c) => c.ledger_seq));
+    const maxSeqAtT = Math.max(...cps.filter((c) => c.t === first.t).map((c) => c.ledger_pos));
     expect(at!.t).toBe(first.t);
-    expect(at!.ledger_seq).toBe(maxSeqAtT);
+    expect(at!.ledger_pos).toBe(maxSeqAtT);
   });
 
   it('deleting checkpoints changes nothing but speed (reduceTo without them agrees)', async () => {
