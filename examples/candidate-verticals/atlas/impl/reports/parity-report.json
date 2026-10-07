@@ -1,0 +1,222 @@
+{
+  "generated_at": "2026-10-07T07:20:27.999Z",
+  "engine": "atlas-impl/0.1.0",
+  "world": "restaurant-v0",
+  "world_validation": {
+    "verdict": "FAIL",
+    "reason": "CCR-001 pending (see contract-changes/CCR-001.md)",
+    "detail": "world definition rejected: 10 issue(s); first at /metadata/id: must match pattern ^[a-z][a-z0-9_]*$"
+  },
+  "world_load_warnings": [
+    {
+      "pointer": "/metadata/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/0/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/1/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/2/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/3/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/4/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/5/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/6/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/7/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    },
+    {
+      "pointer": "/rules/8/id",
+      "message": "must match pattern ^[a-z][a-z0-9_]*$"
+    }
+  ],
+  "branch": "history:day1",
+  "ledger_events": 1815,
+  "ledger_input_order_matched": true,
+  "checkpoints_built": 9,
+  "snapshots": [
+    {
+      "id": "s1_normal",
+      "t": 1791333900,
+      "ts": "2026-10-06T17:45:00-07:00",
+      "fixture": "snapshots/s1_normal.json",
+      "expected_hash": "e43bb95a3f8408ffb662c2d5e4157b3194902581d665cd53da7b39ecad518090",
+      "actual_hash": "7d7139243bb43c08bb910bb7a641588b685c154b4178c11874d60250b70f71bd",
+      "hash_match": false,
+      "restamp_hash_ccr002": "7d7139243bb43c08bb910bb7a641588b685c154b4178c11874d60250b70f71bd",
+      "restamp_matches_runtime": true,
+      "content_match": true,
+      "run_a_hash": "7d7139243bb43c08bb910bb7a641588b685c154b4178c11874d60250b70f71bd",
+      "run_b_hash": "7d7139243bb43c08bb910bb7a641588b685c154b4178c11874d60250b70f71bd",
+      "deterministic": true,
+      "full_replay_hash": "557cd378be6623f457f742bcc3335532754bcc00a9ddc3e18fa995b3a76e8392",
+      "checkpoint_replay_hash": "557cd378be6623f457f742bcc3335532754bcc00a9ddc3e18fa995b3a76e8392",
+      "checkpoint_equivalent": true,
+      "sections": {
+        "state": {
+          "match": true,
+          "diff_count": 0
+        },
+        "metrics": {
+          "match": true,
+          "diff_count": 0
+        },
+        "diagnosis": {
+          "match": true,
+          "diff_count": 0
+        },
+        "evidence_refs": {
+          "match": true,
+          "diff_count": 0
+        }
+      },
+      "diffs": [],
+      "hash_verdict": "FAIL (CCR-002 pending)",
+      "verdict": "PASS (content)"
+    },
+    {
+      "id": "s2_bottleneck_emerging",
+      "t": 1791335280,
+      "ts": "2026-10-06T18:08:00-07:00",
+      "fixture": "snapshots/s2_bottleneck_emerging.json",
+      "expected_hash": "ce8385bf396ea40858bc2119616111038a87d2f1a3baa07270813e1b4bdefb2e",
+      "actual_hash": "765d5cb501eccb71fcf890ecb89773ac207f325954c192c34306018186bb06b6",
+      "hash_match": false,
+      "restamp_hash_ccr002": "765d5cb501eccb71fcf890ecb89773ac207f325954c192c34306018186bb06b6",
+      "restamp_matches_runtime": true,
+      "content_match": true,
+      "run_a_hash": "765d5cb501eccb71fcf890ecb89773ac207f325954c192c34306018186bb06b6",
+      "run_b_hash": "765d5cb501eccb71fcf890ecb89773ac207f325954c192c34306018186bb06b6",
+      "deterministic": true,
+      "full_replay_hash": "a089541fc6ea4132ffe6a4a7aace8dce6bacf18c4685d512b9a1d1eb328157c8",
+      "checkpoint_replay_hash": "a089541fc6ea4132ffe6a4a7aace8dce6bacf18c4685d512b9a1d1eb328157c8",
+      "checkpoint_equivalent": true,
+      "sections": {
+        "state": {
+          "match": true,
+          "diff_count": 0
+        },
+        "metrics": {
+          "match": true,
+          "diff_count": 0
+        },
+        "diagnosis": {
+          "match": true,
+          "diff_count": 0
+        },
+        "evidence_refs": {
+          "match": true,
+          "diff_count": 0
+        }
+      },
+      "diffs": [],
+      "hash_verdict": "FAIL (CCR-002 pending)",
+      "verdict": "PASS (content)"
+    },
+    {
+      "id": "s3_bottleneck_active",
+      "t": 1791336000,
+      "ts": "2026-10-06T18:20:00-07:00",
+      "fixture": "snapshots/s3_bottleneck_active.json",
+      "expected_hash": "5ed539b877739810fd38d736c75f62e9a934d89a08e9a165cdbf4a11535bd029",
+      "actual_hash": "67f66b29b3f98237825b633f095ea1da56b4c4dbdf5e072c80b1b9faf4fefa84",
+      "hash_match": false,
+      "restamp_hash_ccr002": "67f66b29b3f98237825b633f095ea1da56b4c4dbdf5e072c80b1b9faf4fefa84",
+      "restamp_matches_runtime": true,
+      "content_match": true,
+      "run_a_hash": "67f66b29b3f98237825b633f095ea1da56b4c4dbdf5e072c80b1b9faf4fefa84",
+      "run_b_hash": "67f66b29b3f98237825b633f095ea1da56b4c4dbdf5e072c80b1b9faf4fefa84",
+      "deterministic": true,
+      "full_replay_hash": "342bd9c3176f9019f318552b56be9f9ca7e3c916a5cff544705a313aaf753e5d",
+      "checkpoint_replay_hash": "342bd9c3176f9019f318552b56be9f9ca7e3c916a5cff544705a313aaf753e5d",
+      "checkpoint_equivalent": true,
+      "sections": {
+        "state": {
+          "match": true,
+          "diff_count": 0
+        },
+        "metrics": {
+          "match": true,
+          "diff_count": 0
+        },
+        "diagnosis": {
+          "match": true,
+          "diff_count": 0
+        },
+        "evidence_refs": {
+          "match": true,
+          "diff_count": 0
+        }
+      },
+      "diffs": [],
+      "hash_verdict": "FAIL (CCR-002 pending)",
+      "verdict": "PASS (content)"
+    },
+    {
+      "id": "s4_observed_reference",
+      "t": 1791338400,
+      "ts": "2026-10-06T19:00:00-07:00",
+      "fixture": "expected/s4_observed_reference.json",
+      "expected_hash": "9542f78fe95987f2a1b226a23e3ccc00b9667e99ab5796523fb0e21ab4e048f5",
+      "actual_hash": "8de373a7d10fa05056c3227a81ff9f154a8d74de16ae2a4e94cc0132010cc42e",
+      "hash_match": false,
+      "restamp_hash_ccr002": "8de373a7d10fa05056c3227a81ff9f154a8d74de16ae2a4e94cc0132010cc42e",
+      "restamp_matches_runtime": true,
+      "content_match": true,
+      "run_a_hash": "8de373a7d10fa05056c3227a81ff9f154a8d74de16ae2a4e94cc0132010cc42e",
+      "run_b_hash": "8de373a7d10fa05056c3227a81ff9f154a8d74de16ae2a4e94cc0132010cc42e",
+      "deterministic": true,
+      "full_replay_hash": "02eb14f4f873e93f714e40e40197c647a99e75364c54d2cab12d47aef9aa007c",
+      "checkpoint_replay_hash": "02eb14f4f873e93f714e40e40197c647a99e75364c54d2cab12d47aef9aa007c",
+      "checkpoint_equivalent": true,
+      "sections": {
+        "state": {
+          "match": true,
+          "diff_count": 0
+        },
+        "metrics": {
+          "match": true,
+          "diff_count": 0
+        },
+        "diagnosis": {
+          "match": true,
+          "diff_count": 0
+        },
+        "evidence_refs": {
+          "match": true,
+          "diff_count": 0
+        }
+      },
+      "diffs": [],
+      "hash_verdict": "FAIL (CCR-002 pending)",
+      "verdict": "PASS (content)"
+    }
+  ],
+  "content_parity": "PASS",
+  "hash_parity": "FAIL",
+  "blockers": [
+    "CCR-001: frozen world fails frozen schema (10 id-pattern pointers)",
+    "CCR-002: state_hash re-stamp to XAS-CANON-1 pending"
+  ],
+  "overall": "FAIL",
+  "overall_note": "Implementation complete; content parity holds. M1 PASS is blocked on Fable accepting the filed CCRs — no frozen content disagreement remains."
+}

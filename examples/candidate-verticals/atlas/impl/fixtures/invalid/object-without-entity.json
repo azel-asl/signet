@@ -1,0 +1,798 @@
+{
+  "atlas_schema": "atlas-world/0.1",
+  "metadata": {
+    "id": "restaurant-v0",
+    "name": "Synthetic counter-service restaurant (ATLAS V0 proving ground)",
+    "version": "0.1.0",
+    "domain": "restaurant",
+    "description": "Five kitchen stations, five line staff plus a manager, two fryers, one grill. Exists only to prove the ATLAS architecture. Every number is a demo parameter, not a business claim.",
+    "status": "synthetic",
+    "authors": [
+      "ATLAS V0 spec"
+    ],
+    "created": "2026-10-07"
+  },
+  "time": {
+    "unit": "second",
+    "timezone": "America/Los_Angeles",
+    "origin": "2026-10-06T17:00:00-07:00",
+    "end": "2026-10-06T20:30:00-07:00"
+  },
+  "entity_types": [
+    {
+      "id": "person",
+      "attributes": [
+        "role",
+        "skills",
+        "hourly_cost"
+      ]
+    },
+    {
+      "id": "station",
+      "attributes": [
+        "area",
+        "staffing",
+        "per_staff_concurrency",
+        "overload_queue",
+        "overload_wait_s"
+      ]
+    },
+    {
+      "id": "equipment",
+      "attributes": [
+        "station",
+        "capacity",
+        "status"
+      ]
+    },
+    {
+      "id": "area",
+      "attributes": []
+    },
+    {
+      "id": "product",
+      "attributes": [
+        "price",
+        "process"
+      ]
+    },
+    {
+      "id": "order",
+      "attributes": [
+        "channel",
+        "items",
+        "total"
+      ],
+      "dynamic": true
+    },
+    {
+      "id": "work_item",
+      "attributes": [
+        "order",
+        "item",
+        "station",
+        "step"
+      ],
+      "dynamic": true
+    }
+  ],
+  "entities": [
+    {
+      "id": "area_dining",
+      "type": "area",
+      "name": "Dining"
+    },
+    {
+      "id": "area_kitchen",
+      "type": "area",
+      "name": "Kitchen"
+    },
+    {
+      "id": "area_pickup",
+      "type": "area",
+      "name": "Pickup"
+    },
+    {
+      "id": "st_prep",
+      "type": "station",
+      "name": "Prep",
+      "attrs": {
+        "area": "area_kitchen",
+        "staffing": "required",
+        "per_staff_concurrency": 2,
+        "overload_queue": 6,
+        "overload_wait_s": 240
+      }
+    },
+    {
+      "id": "st_grill",
+      "type": "station",
+      "name": "Grill",
+      "attrs": {
+        "area": "area_kitchen",
+        "staffing": "required",
+        "per_staff_concurrency": 4,
+        "overload_queue": 6,
+        "overload_wait_s": 240
+      }
+    },
+    {
+      "id": "st_fry",
+      "type": "station",
+      "name": "Fry",
+      "attrs": {
+        "area": "area_kitchen",
+        "staffing": "required",
+        "per_staff_concurrency": 3,
+        "overload_queue": 6,
+        "overload_wait_s": 240
+      }
+    },
+    {
+      "id": "st_pass",
+      "type": "station",
+      "name": "Pass / Assembly",
+      "attrs": {
+        "area": "area_kitchen",
+        "staffing": "required",
+        "per_staff_concurrency": 2,
+        "overload_queue": 6,
+        "overload_wait_s": 240
+      }
+    },
+    {
+      "id": "eq_prep_table_1",
+      "type": "equipment",
+      "name": "Prep table",
+      "attrs": {
+        "station": "st_prep",
+        "capacity": 4,
+        "status": "OPERATIONAL"
+      }
+    },
+    {
+      "id": "eq_grill_1",
+      "type": "equipment",
+      "name": "Flat-top grill",
+      "attrs": {
+        "station": "st_grill",
+        "capacity": 8,
+        "status": "OPERATIONAL"
+      }
+    },
+    {
+      "id": "eq_fryer_1",
+      "type": "equipment",
+      "name": "Fryer 1",
+      "attrs": {
+        "station": "st_fry",
+        "capacity": 3,
+        "status": "OPERATIONAL"
+      }
+    },
+    {
+      "id": "eq_fryer_2",
+      "type": "equipment",
+      "name": "Fryer 2",
+      "attrs": {
+        "station": "st_fry",
+        "capacity": 3,
+        "status": "OPERATIONAL"
+      }
+    },
+    {
+      "id": "emp_01",
+      "type": "person",
+      "name": "Dana",
+      "attrs": {
+        "role": "cook",
+        "skills": [
+          "prep",
+          "grill",
+          "pass"
+        ],
+        "hourly_cost": 22
+      }
+    },
+    {
+      "id": "emp_02",
+      "type": "person",
+      "name": "Luis",
+      "attrs": {
+        "role": "cook",
+        "skills": [
+          "grill",
+          "fry"
+        ],
+        "hourly_cost": 22
+      }
+    },
+    {
+      "id": "emp_03",
+      "type": "person",
+      "name": "Priya",
+      "attrs": {
+        "role": "cook",
+        "skills": [
+          "fry",
+          "prep"
+        ],
+        "hourly_cost": 22
+      }
+    },
+    {
+      "id": "emp_04",
+      "type": "person",
+      "name": "Marcus",
+      "attrs": {
+        "role": "cook",
+        "skills": [
+          "prep",
+          "fry",
+          "pass"
+        ],
+        "hourly_cost": 22
+      }
+    },
+    {
+      "id": "emp_05",
+      "type": "person",
+      "name": "Jo",
+      "attrs": {
+        "role": "expo",
+        "skills": [
+          "pass"
+        ],
+        "hourly_cost": 20
+      }
+    },
+    {
+      "id": "emp_06",
+      "type": "person",
+      "name": "Sam",
+      "attrs": {
+        "role": "manager",
+        "skills": [
+          "prep",
+          "grill",
+          "fry",
+          "pass"
+        ],
+        "hourly_cost": 30
+      }
+    },
+    {
+      "id": "prod_burger",
+      "type": "product",
+      "name": "Burger",
+      "attrs": {
+        "price": 11.5,
+        "process": "proc_burger"
+      }
+    },
+    {
+      "id": "prod_chicken",
+      "type": "product",
+      "name": "Chicken sandwich",
+      "attrs": {
+        "price": 12.0,
+        "process": "proc_chicken"
+      }
+    },
+    {
+      "id": "prod_salad",
+      "type": "product",
+      "name": "Salad",
+      "attrs": {
+        "price": 9.0,
+        "process": "proc_salad"
+      }
+    },
+    {
+      "id": "prod_fries",
+      "type": "product",
+      "name": "Fries",
+      "attrs": {
+        "price": 4.0,
+        "process": "proc_fries"
+      }
+    },
+    {
+      "id": "prod_drink",
+      "type": "product",
+      "name": "Drink",
+      "attrs": {
+        "price": 2.5,
+        "process": null
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "type": "located_in",
+      "from": "st_prep",
+      "to": "area_kitchen"
+    },
+    {
+      "type": "located_in",
+      "from": "st_grill",
+      "to": "area_kitchen"
+    },
+    {
+      "type": "located_in",
+      "from": "st_fry",
+      "to": "area_kitchen"
+    },
+    {
+      "type": "located_in",
+      "from": "st_pass",
+      "to": "area_kitchen"
+    },
+    {
+      "type": "attached_to",
+      "from": "eq_prep_table_1",
+      "to": "st_prep"
+    },
+    {
+      "type": "attached_to",
+      "from": "eq_grill_1",
+      "to": "st_grill"
+    },
+    {
+      "type": "attached_to",
+      "from": "eq_fryer_1",
+      "to": "st_fry"
+    },
+    {
+      "type": "attached_to",
+      "from": "eq_fryer_2",
+      "to": "st_fry"
+    },
+    {
+      "type": "reports_to",
+      "from": "emp_01",
+      "to": "emp_06"
+    },
+    {
+      "type": "reports_to",
+      "from": "emp_02",
+      "to": "emp_06"
+    },
+    {
+      "type": "reports_to",
+      "from": "emp_03",
+      "to": "emp_06"
+    },
+    {
+      "type": "reports_to",
+      "from": "emp_04",
+      "to": "emp_06"
+    },
+    {
+      "type": "reports_to",
+      "from": "emp_05",
+      "to": "emp_06"
+    }
+  ],
+  "aliases": {
+    "staffhub": {
+      "EMP001": "emp_01",
+      "EMP002": "emp_02",
+      "EMP003": "emp_03",
+      "EMP004": "emp_04",
+      "EMP005": "emp_05",
+      "EMP006": "emp_06",
+      "PREP": "st_prep",
+      "GRILL": "st_grill",
+      "FRY": "st_fry",
+      "PASS": "st_pass"
+    },
+    "kds": {
+      "PREP": "st_prep",
+      "GRILL": "st_grill",
+      "FRY": "st_fry",
+      "PASS": "st_pass"
+    },
+    "iot": {
+      "FRY-01": "eq_fryer_1",
+      "FRY-02": "eq_fryer_2",
+      "GRL-01": "eq_grill_1"
+    },
+    "pos": {
+      "BRG": "prod_burger",
+      "CHK": "prod_chicken",
+      "SAL": "prod_salad",
+      "FRY": "prod_fries",
+      "DRK": "prod_drink"
+    }
+  },
+  "processes": [
+    {
+      "id": "proc_burger",
+      "applies_to": "prod_burger",
+      "steps": [
+        {
+          "id": "prep",
+          "station": "st_prep",
+          "duration_s": 90
+        },
+        {
+          "id": "grill",
+          "station": "st_grill",
+          "duration_s": 240
+        }
+      ]
+    },
+    {
+      "id": "proc_chicken",
+      "applies_to": "prod_chicken",
+      "steps": [
+        {
+          "id": "prep",
+          "station": "st_prep",
+          "duration_s": 90
+        },
+        {
+          "id": "fry",
+          "station": "st_fry",
+          "duration_s": 300
+        }
+      ]
+    },
+    {
+      "id": "proc_salad",
+      "applies_to": "prod_salad",
+      "steps": [
+        {
+          "id": "prep",
+          "station": "st_prep",
+          "duration_s": 150
+        }
+      ]
+    },
+    {
+      "id": "proc_fries",
+      "applies_to": "prod_fries",
+      "steps": [
+        {
+          "id": "fry",
+          "station": "st_fry",
+          "duration_s": 210
+        }
+      ]
+    },
+    {
+      "id": "proc_order",
+      "applies_to": "order",
+      "steps": [
+        {
+          "id": "pass",
+          "station": "st_pass",
+          "duration_s": 90,
+          "requires": "all_items_complete"
+        }
+      ],
+      "handoff_s": 60
+    }
+  ],
+  "rules": [
+    {
+      "id": "R01",
+      "kind": "station_capacity",
+      "description": "effective capacity = 0 if a staffing-required station has no assigned on-shift employee; otherwise min(sum of capacity of attached equipment whose status is not DOWN, staff_count * per_staff_concurrency)."
+    },
+    {
+      "id": "R02",
+      "kind": "queue_discipline",
+      "description": "FIFO by (queued_t, order created_t, work_id). No preemption. No priority classes in V0."
+    },
+    {
+      "id": "R03",
+      "kind": "no_preemption",
+      "description": "Work in progress always finishes, even if capacity drops below the in-progress count. No new work starts while in_progress >= effective capacity."
+    },
+    {
+      "id": "R04",
+      "kind": "single_assignment",
+      "description": "An employee is assigned to at most one station at a time. A reassignment takes effect at the event time; in-progress work at the old station continues (R03)."
+    },
+    {
+      "id": "R05",
+      "kind": "assembly_barrier",
+      "description": "The order-level pass step is queued only when every item's last kitchen step is complete (immediately at creation for orders with no kitchen steps)."
+    },
+    {
+      "id": "R06",
+      "kind": "handoff",
+      "description": "ORDER_COMPLETED occurs handoff_s after ORDER_READY. No staff needed."
+    },
+    {
+      "id": "R07",
+      "kind": "station_status",
+      "description": "UNSTAFFED if staff=0 and queue>0; OVERLOADED if queue_len >= overload_queue or oldest queued wait >= overload_wait_s; BUSY if in_progress >= effective capacity and capacity>0; else NORMAL."
+    },
+    {
+      "id": "R08",
+      "kind": "skills_required",
+      "description": "An employee may only be assigned to a station listed in their skills. Violations are rejected at validation, not silently ignored."
+    },
+    {
+      "id": "R09",
+      "kind": "no_balking",
+      "description": "V0 models no lost demand: every created order is eventually served. Revenue differences between branches are timing differences, not gained revenue."
+    }
+  ],
+  "initial_state": {
+    "clock_in": [
+      "emp_01",
+      "emp_02",
+      "emp_03",
+      "emp_04",
+      "emp_05",
+      "emp_06"
+    ],
+    "assignments": {
+      "emp_01": "st_prep",
+      "emp_02": "st_grill",
+      "emp_03": "st_fry",
+      "emp_04": "st_prep",
+      "emp_05": "st_pass",
+      "emp_06": null
+    },
+    "equipment": {
+      "eq_prep_table_1": "OPERATIONAL",
+      "eq_grill_1": "OPERATIONAL",
+      "eq_fryer_1": "OPERATIONAL",
+      "eq_fryer_2": "OPERATIONAL"
+    }
+  },
+  "scheduled_events": [],
+  "arrival_model": {
+    "kind": "piecewise_poisson",
+    "note": "Used only when a run generates its own arrivals (COMPOSE / forward simulation). The demo branch replays historical arrivals instead.",
+    "segments": [
+      {
+        "from": "17:00",
+        "to": "17:30",
+        "orders_per_hour": 18
+      },
+      {
+        "from": "17:30",
+        "to": "18:00",
+        "orders_per_hour": 26
+      },
+      {
+        "from": "18:00",
+        "to": "18:15",
+        "orders_per_hour": 38
+      },
+      {
+        "from": "18:15",
+        "to": "19:30",
+        "orders_per_hour": 50
+      },
+      {
+        "from": "19:30",
+        "to": "20:00",
+        "orders_per_hour": 30
+      },
+      {
+        "from": "20:00",
+        "to": "20:30",
+        "orders_per_hour": 16
+      }
+    ],
+    "order_mix": {
+      "mains": {
+        "prod_burger": 0.55,
+        "prod_chicken": 0.3,
+        "prod_salad": 0.15
+      },
+      "second_main_p": 0.25,
+      "fries_p": 0.7,
+      "drink_p": 0.6,
+      "channel": {
+        "dine_in": 0.65,
+        "pickup": 0.35
+      }
+    }
+  },
+  "metrics": [
+    {
+      "id": "orders_open",
+      "unit": "count",
+      "definition": "orders with state OPEN or READY at t"
+    },
+    {
+      "id": "orders_completed",
+      "unit": "count",
+      "definition": "orders with state COMPLETED at t (cumulative)"
+    },
+    {
+      "id": "throughput_per_hour",
+      "unit": "orders/h",
+      "definition": "orders completed in (t-3600, t]"
+    },
+    {
+      "id": "avg_kitchen_time_s",
+      "unit": "s",
+      "definition": "mean(completed_t - created_t) over orders completed in (t-900, t]; null if none"
+    },
+    {
+      "id": "p90_kitchen_time_s",
+      "unit": "s",
+      "definition": "90th percentile (nearest-rank) of the same set; null if none"
+    },
+    {
+      "id": "over_target_share",
+      "unit": "ratio",
+      "definition": "share of orders completed in (t-900, t] with kitchen time > goal g_kitchen_time target; null if none"
+    },
+    {
+      "id": "revenue_completed",
+      "unit": "USD",
+      "definition": "sum of totals of COMPLETED orders (cumulative)"
+    },
+    {
+      "id": "station.queue_len",
+      "unit": "count",
+      "definition": "work items QUEUED at the station at t"
+    },
+    {
+      "id": "station.in_progress",
+      "unit": "count",
+      "definition": "work items IN_PROGRESS at the station at t"
+    },
+    {
+      "id": "station.oldest_wait_s",
+      "unit": "s",
+      "definition": "t - min(queued_t) over QUEUED work at the station; 0 if empty"
+    },
+    {
+      "id": "station.utilization",
+      "unit": "ratio",
+      "definition": "busy slot-seconds / integral of effective capacity over (t-900, t]; null if capacity integral is 0"
+    }
+  ],
+  "goals": [
+    {
+      "id": "g_kitchen_time",
+      "metric": "avg_kitchen_time_s",
+      "op": "<=",
+      "target": 600,
+      "description": "Door-to-handoff at or under 10 minutes"
+    },
+    {
+      "id": "g_fry_wait",
+      "metric": "station.oldest_wait_s",
+      "station": "st_fry",
+      "op": "<=",
+      "target": 120,
+      "description": "Nothing waits more than 2 minutes for a basket"
+    }
+  ],
+  "economics": {
+    "currency": "USD",
+    "revenue_recognition": "on ORDER_CREATED (paid at counter); reported per branch as revenue of orders COMPLETED within the horizon to expose timing shifts",
+    "labor_cost_per_hour": {
+      "cook": 22,
+      "expo": 20,
+      "manager": 30
+    },
+    "delay_cost_per_order_minute_over_target": {
+      "value": 0.35,
+      "claim_class": "assumed",
+      "note": "Illustrative goodwill/comp proxy. Must be shown as ASSUMED wherever it feeds a number."
+    },
+    "lost_demand_model": null
+  },
+  "visualization": {
+    "representation": "floorplan_2d",
+    "canvas": {
+      "w": 1200,
+      "h": 720
+    },
+    "areas": {
+      "area_dining": {
+        "x": 20,
+        "y": 20,
+        "w": 520,
+        "h": 680
+      },
+      "area_kitchen": {
+        "x": 560,
+        "y": 20,
+        "w": 460,
+        "h": 680
+      },
+      "area_pickup": {
+        "x": 1040,
+        "y": 20,
+        "w": 140,
+        "h": 680
+      }
+    },
+    "objects": {
+      "st_prep": {
+        "x": 600,
+        "y": 80,
+        "w": 180,
+        "h": 120
+      },
+      "st_grill": {
+        "x": 820,
+        "y": 80,
+        "w": 180,
+        "h": 120
+      },
+      "st_fry": {
+        "x": 600,
+        "y": 260,
+        "w": 180,
+        "h": 120
+      },
+      "st_pass": {
+        "x": 820,
+        "y": 260,
+        "w": 180,
+        "h": 120
+      },
+      "eq_fryer_1": {
+        "x": 610,
+        "y": 400,
+        "w": 80,
+        "h": 60
+      },
+      "eq_fryer_2": {
+        "x": 700,
+        "y": 400,
+        "w": 80,
+        "h": 60
+      },
+      "eq_grill_1": {
+        "x": 830,
+        "y": 400,
+        "w": 160,
+        "h": 60
+      },
+      "eq_prep_table_1": {
+        "x": 610,
+        "y": 480,
+        "w": 170,
+        "h": 50
+      },
+      "ghost_rect": {
+        "x": 0,
+        "y": 0,
+        "w": 10,
+        "h": 10
+      }
+    },
+    "flows": [
+      [
+        "area_dining",
+        "st_prep"
+      ],
+      [
+        "st_prep",
+        "st_grill"
+      ],
+      [
+        "st_prep",
+        "st_fry"
+      ],
+      [
+        "st_grill",
+        "st_pass"
+      ],
+      [
+        "st_fry",
+        "st_pass"
+      ],
+      [
+        "st_pass",
+        "area_pickup"
+      ]
+    ]
+  }
+}
