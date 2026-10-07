@@ -1,0 +1,21 @@
+{
+  "atlas_schema": "atlas-scenario/0.1",
+  "id": "scn_fry_rush_reassign_emp04",
+  "name": "Move Marcus (emp_04) from Prep to Fry during the dinner rush",
+  "world": "restaurant-v0",
+  "base": { "branch": "history:day1", "t": "2026-10-06T18:20:00-07:00" },
+  "horizon": "2026-10-06T19:30:00-07:00",
+  "arrivals": { "source": "historical_replay", "note": "Both branches receive exactly the historical ORDER_CREATED events after the branch point. No arrivals are invented." },
+  "duration_model": "nominal",
+  "in_progress_rule": "work in progress at the branch point completes at max(branch_t, started_t + nominal duration)",
+  "seed": 0,
+  "baseline": { "interventions": [] },
+  "scenario": {
+    "interventions": [
+      { "id": "iv_01", "kind": "reassign", "employee": "emp_04", "from": "st_prep", "to": "st_fry", "at": "2026-10-06T18:20:00-07:00" },
+      { "id": "iv_02", "kind": "reassign", "employee": "emp_04", "from": "st_fry", "to": "st_prep", "at": "2026-10-06T19:30:00-07:00" }
+    ]
+  },
+  "comparison_window": { "from": "2026-10-06T18:20:00-07:00", "to": "2026-10-06T19:30:00-07:00" },
+  "required_authority": "approve:staff_reassignment"
+}

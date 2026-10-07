@@ -1,0 +1,1062 @@
+{
+  "atlas_schema": "atlas-snapshot/0.1",
+  "id": "s4_observed_reference",
+  "title": "What actually happened at 19:00 (observed, day 1)",
+  "world": "restaurant-v0",
+  "branch": "history:day1",
+  "mode": "RECONSTRUCT",
+  "claim_class": "derived",
+  "t": 1791338400,
+  "ts": "2026-10-06T19:00:00-07:00",
+  "engine": "oracle-0.1.0",
+  "narrative": "Historical reference for the same instant. Never to be shown in the same visual register as a simulated state.",
+  "state": {
+    "t": 1791338400,
+    "ts": "2026-10-06T19:00:00-07:00",
+    "ledger_events_applied": 1052,
+    "employees": {
+      "emp_01": {
+        "on_shift": true,
+        "station": "st_prep"
+      },
+      "emp_02": {
+        "on_shift": true,
+        "station": "st_grill"
+      },
+      "emp_03": {
+        "on_shift": true,
+        "station": "st_fry"
+      },
+      "emp_04": {
+        "on_shift": true,
+        "station": "st_prep"
+      },
+      "emp_05": {
+        "on_shift": true,
+        "station": "st_pass"
+      },
+      "emp_06": {
+        "on_shift": true,
+        "station": null
+      }
+    },
+    "equipment": {
+      "eq_prep_table_1": {
+        "status": "OPERATIONAL",
+        "capacity": 4,
+        "nominal_capacity": 4
+      },
+      "eq_grill_1": {
+        "status": "OPERATIONAL",
+        "capacity": 8,
+        "nominal_capacity": 8
+      },
+      "eq_fryer_1": {
+        "status": "OPERATIONAL",
+        "capacity": 3,
+        "nominal_capacity": 3
+      },
+      "eq_fryer_2": {
+        "status": "DEGRADED",
+        "capacity": 2,
+        "nominal_capacity": 3
+      }
+    },
+    "stations": {
+      "st_prep": {
+        "status": "NORMAL",
+        "staff": [
+          "emp_01",
+          "emp_04"
+        ],
+        "capacity": {
+          "equipment": 4,
+          "staff": 4,
+          "effective": 4
+        },
+        "queue": [],
+        "in_progress": [
+          "w_0077_1_prep",
+          "w_0077_2_prep",
+          "w_0078_1_prep"
+        ]
+      },
+      "st_grill": {
+        "status": "NORMAL",
+        "staff": [
+          "emp_02"
+        ],
+        "capacity": {
+          "equipment": 8,
+          "staff": 4,
+          "effective": 4
+        },
+        "queue": [],
+        "in_progress": [
+          "w_0072_1_grill",
+          "w_0074_1_grill",
+          "w_0075_1_grill"
+        ]
+      },
+      "st_fry": {
+        "status": "OVERLOADED",
+        "staff": [
+          "emp_03"
+        ],
+        "capacity": {
+          "equipment": 5,
+          "staff": 3,
+          "effective": 3
+        },
+        "queue": [
+          "w_0062_2_fry",
+          "w_0064_3_fry",
+          "w_0063_1_fry",
+          "w_0065_2_fry",
+          "w_0066_2_fry",
+          "w_0068_2_fry",
+          "w_0070_2_fry",
+          "w_0071_2_fry",
+          "w_0069_1_fry",
+          "w_0072_2_fry",
+          "w_0071_1_fry",
+          "w_0074_2_fry",
+          "w_0073_1_fry",
+          "w_0076_2_fry",
+          "w_0076_1_fry",
+          "w_0078_2_fry"
+        ],
+        "in_progress": [
+          "w_0058_1_fry",
+          "w_0060_1_fry",
+          "w_0061_2_fry"
+        ]
+      },
+      "st_pass": {
+        "status": "NORMAL",
+        "staff": [
+          "emp_05"
+        ],
+        "capacity": {
+          "equipment": 2,
+          "staff": 2,
+          "effective": 2
+        },
+        "queue": [],
+        "in_progress": [
+          "w_0057_0_pass"
+        ]
+      }
+    },
+    "orders_open": [
+      {
+        "id": "o_0057",
+        "state": "OPEN",
+        "created": "2026-10-06T18:38:14-07:00",
+        "age_s": 1306,
+        "items": [
+          "prod_chicken",
+          "prod_fries"
+        ],
+        "total": 16
+      },
+      {
+        "id": "o_0058",
+        "state": "OPEN",
+        "created": "2026-10-06T18:40:02-07:00",
+        "age_s": 1198,
+        "items": [
+          "prod_chicken",
+          "prod_burger",
+          "prod_drink"
+        ],
+        "total": 26
+      },
+      {
+        "id": "o_0059",
+        "state": "READY",
+        "created": "2026-10-06T18:40:41-07:00",
+        "age_s": 1159,
+        "items": [
+          "prod_burger",
+          "prod_burger",
+          "prod_fries"
+        ],
+        "total": 27
+      },
+      {
+        "id": "o_0060",
+        "state": "OPEN",
+        "created": "2026-10-06T18:40:45-07:00",
+        "age_s": 1155,
+        "items": [
+          "prod_chicken"
+        ],
+        "total": 12
+      },
+      {
+        "id": "o_0061",
+        "state": "OPEN",
+        "created": "2026-10-06T18:45:31-07:00",
+        "age_s": 869,
+        "items": [
+          "prod_burger",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18
+      },
+      {
+        "id": "o_0062",
+        "state": "OPEN",
+        "created": "2026-10-06T18:45:43-07:00",
+        "age_s": 857,
+        "items": [
+          "prod_burger",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18
+      },
+      {
+        "id": "o_0063",
+        "state": "OPEN",
+        "created": "2026-10-06T18:45:44-07:00",
+        "age_s": 856,
+        "items": [
+          "prod_chicken",
+          "prod_drink"
+        ],
+        "total": 14.5
+      },
+      {
+        "id": "o_0064",
+        "state": "OPEN",
+        "created": "2026-10-06T18:46:52-07:00",
+        "age_s": 788,
+        "items": [
+          "prod_salad",
+          "prod_salad",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 24.5
+      },
+      {
+        "id": "o_0065",
+        "state": "OPEN",
+        "created": "2026-10-06T18:47:43-07:00",
+        "age_s": 737,
+        "items": [
+          "prod_burger",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18
+      },
+      {
+        "id": "o_0066",
+        "state": "OPEN",
+        "created": "2026-10-06T18:48:34-07:00",
+        "age_s": 686,
+        "items": [
+          "prod_burger",
+          "prod_fries"
+        ],
+        "total": 15.5
+      },
+      {
+        "id": "o_0068",
+        "state": "OPEN",
+        "created": "2026-10-06T18:49:23-07:00",
+        "age_s": 637,
+        "items": [
+          "prod_salad",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 15.5
+      },
+      {
+        "id": "o_0069",
+        "state": "OPEN",
+        "created": "2026-10-06T18:51:46-07:00",
+        "age_s": 494,
+        "items": [
+          "prod_chicken",
+          "prod_drink"
+        ],
+        "total": 14.5
+      },
+      {
+        "id": "o_0070",
+        "state": "OPEN",
+        "created": "2026-10-06T18:52:50-07:00",
+        "age_s": 430,
+        "items": [
+          "prod_burger",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18
+      },
+      {
+        "id": "o_0071",
+        "state": "OPEN",
+        "created": "2026-10-06T18:53:10-07:00",
+        "age_s": 410,
+        "items": [
+          "prod_chicken",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18.5
+      },
+      {
+        "id": "o_0072",
+        "state": "OPEN",
+        "created": "2026-10-06T18:53:34-07:00",
+        "age_s": 386,
+        "items": [
+          "prod_burger",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18
+      },
+      {
+        "id": "o_0073",
+        "state": "OPEN",
+        "created": "2026-10-06T18:54:14-07:00",
+        "age_s": 346,
+        "items": [
+          "prod_chicken",
+          "prod_drink"
+        ],
+        "total": 14.5
+      },
+      {
+        "id": "o_0074",
+        "state": "OPEN",
+        "created": "2026-10-06T18:54:59-07:00",
+        "age_s": 301,
+        "items": [
+          "prod_burger",
+          "prod_fries"
+        ],
+        "total": 15.5
+      },
+      {
+        "id": "o_0075",
+        "state": "OPEN",
+        "created": "2026-10-06T18:56:38-07:00",
+        "age_s": 202,
+        "items": [
+          "prod_burger",
+          "prod_drink"
+        ],
+        "total": 14
+      },
+      {
+        "id": "o_0076",
+        "state": "OPEN",
+        "created": "2026-10-06T18:57:15-07:00",
+        "age_s": 165,
+        "items": [
+          "prod_chicken",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18.5
+      },
+      {
+        "id": "o_0077",
+        "state": "OPEN",
+        "created": "2026-10-06T18:59:39-07:00",
+        "age_s": 21,
+        "items": [
+          "prod_burger",
+          "prod_burger",
+          "prod_drink"
+        ],
+        "total": 25.5
+      },
+      {
+        "id": "o_0078",
+        "state": "OPEN",
+        "created": "2026-10-06T18:59:58-07:00",
+        "age_s": 2,
+        "items": [
+          "prod_chicken",
+          "prod_fries",
+          "prod_drink"
+        ],
+        "total": 18.5
+      }
+    ],
+    "work_open": [
+      {
+        "id": "w_0058_1_fry",
+        "order_id": "o_0058",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:41:28-07:00",
+        "started": "2026-10-06T18:55:59-07:00"
+      },
+      {
+        "id": "w_0060_1_fry",
+        "order_id": "o_0060",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:43:08-07:00",
+        "started": "2026-10-06T18:58:06-07:00"
+      },
+      {
+        "id": "w_0061_2_fry",
+        "order_id": "o_0061",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:45:31-07:00",
+        "started": "2026-10-06T18:58:29-07:00"
+      },
+      {
+        "id": "w_0062_2_fry",
+        "order_id": "o_0062",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:45:43-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0064_3_fry",
+        "order_id": "o_0064",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:46:52-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0063_1_fry",
+        "order_id": "o_0063",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:47:03-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0065_2_fry",
+        "order_id": "o_0065",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:47:43-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0066_2_fry",
+        "order_id": "o_0066",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:48:34-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0068_2_fry",
+        "order_id": "o_0068",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:49:23-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0070_2_fry",
+        "order_id": "o_0070",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:52:50-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0071_2_fry",
+        "order_id": "o_0071",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:53:10-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0069_1_fry",
+        "order_id": "o_0069",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:53:32-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0072_2_fry",
+        "order_id": "o_0072",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:53:34-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0071_1_fry",
+        "order_id": "o_0071",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:54:31-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0074_2_fry",
+        "order_id": "o_0074",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:54:59-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0072_1_grill",
+        "order_id": "o_0072",
+        "station_id": "st_grill",
+        "step": "grill",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:55:11-07:00",
+        "started": "2026-10-06T18:55:11-07:00"
+      },
+      {
+        "id": "w_0073_1_fry",
+        "order_id": "o_0073",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:55:53-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0074_1_grill",
+        "order_id": "o_0074",
+        "station_id": "st_grill",
+        "step": "grill",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:56:21-07:00",
+        "started": "2026-10-06T18:56:21-07:00"
+      },
+      {
+        "id": "w_0076_2_fry",
+        "order_id": "o_0076",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:57:15-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0075_1_grill",
+        "order_id": "o_0075",
+        "station_id": "st_grill",
+        "step": "grill",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:58:20-07:00",
+        "started": "2026-10-06T18:58:20-07:00"
+      },
+      {
+        "id": "w_0057_0_pass",
+        "order_id": "o_0057",
+        "station_id": "st_pass",
+        "step": "pass",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:58:29-07:00",
+        "started": "2026-10-06T18:58:29-07:00"
+      },
+      {
+        "id": "w_0076_1_fry",
+        "order_id": "o_0076",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:58:53-07:00",
+        "started": null
+      },
+      {
+        "id": "w_0077_1_prep",
+        "order_id": "o_0077",
+        "station_id": "st_prep",
+        "step": "prep",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:59:39-07:00",
+        "started": "2026-10-06T18:59:39-07:00"
+      },
+      {
+        "id": "w_0077_2_prep",
+        "order_id": "o_0077",
+        "station_id": "st_prep",
+        "step": "prep",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:59:39-07:00",
+        "started": "2026-10-06T18:59:39-07:00"
+      },
+      {
+        "id": "w_0078_1_prep",
+        "order_id": "o_0078",
+        "station_id": "st_prep",
+        "step": "prep",
+        "state": "IN_PROGRESS",
+        "queued": "2026-10-06T18:59:58-07:00",
+        "started": "2026-10-06T18:59:58-07:00"
+      },
+      {
+        "id": "w_0078_2_fry",
+        "order_id": "o_0078",
+        "station_id": "st_fry",
+        "step": "fry",
+        "state": "QUEUED",
+        "queued": "2026-10-06T18:59:58-07:00",
+        "started": null
+      }
+    ],
+    "reports": [
+      {
+        "t": 1791335070,
+        "about": "eq_fryer_2",
+        "reporter": "emp_03",
+        "text": "Fryer 2 right bay not heating, running the left basket only.",
+        "ts": "2026-10-06T18:04:30-07:00"
+      }
+    ],
+    "last_measurements": {
+      "eq_fryer_2:oil_temp_f": {
+        "value": 306,
+        "ts": "2026-10-06T18:01:40-07:00"
+      }
+    }
+  },
+  "metrics": {
+    "orders_open": 21,
+    "orders_completed": 57,
+    "throughput_per_hour": 41,
+    "avg_kitchen_time_s": 933,
+    "p90_kitchen_time_s": 1153,
+    "over_target_share": 0.8,
+    "revenue_completed": 1076,
+    "stations": {
+      "st_prep": {
+        "queue_len": 0,
+        "in_progress": 3,
+        "oldest_wait_s": 0,
+        "capacity": {
+          "equipment": 4,
+          "staff": 4,
+          "effective": 4
+        },
+        "staff": [
+          "emp_01",
+          "emp_04"
+        ],
+        "status": "NORMAL",
+        "utilization": 0.491
+      },
+      "st_grill": {
+        "queue_len": 0,
+        "in_progress": 3,
+        "oldest_wait_s": 0,
+        "capacity": {
+          "equipment": 8,
+          "staff": 4,
+          "effective": 4
+        },
+        "staff": [
+          "emp_02"
+        ],
+        "status": "NORMAL",
+        "utilization": 0.797
+      },
+      "st_fry": {
+        "queue_len": 16,
+        "in_progress": 3,
+        "oldest_wait_s": 857,
+        "capacity": {
+          "equipment": 5,
+          "staff": 3,
+          "effective": 3
+        },
+        "staff": [
+          "emp_03"
+        ],
+        "status": "OVERLOADED",
+        "utilization": 1
+      },
+      "st_pass": {
+        "queue_len": 0,
+        "in_progress": 1,
+        "oldest_wait_s": 0,
+        "capacity": {
+          "equipment": 2,
+          "staff": 2,
+          "effective": 2
+        },
+        "staff": [
+          "emp_05"
+        ],
+        "status": "NORMAL",
+        "utilization": 0.531
+      }
+    }
+  },
+  "diagnosis": {
+    "claim_class": "derived",
+    "bottleneck": "st_fry",
+    "since_t": 1791335700,
+    "since": "2026-10-06T18:15:00-07:00",
+    "queue_len": 16,
+    "oldest_wait_s": 857,
+    "utilization_15m": 1,
+    "capacity": {
+      "equipment": 5,
+      "staff": 3,
+      "effective": 3
+    },
+    "binding_constraint": "staffing",
+    "affected_orders": [
+      "o_0062",
+      "o_0064",
+      "o_0063",
+      "o_0065",
+      "o_0066",
+      "o_0068",
+      "o_0070",
+      "o_0071",
+      "o_0069",
+      "o_0072",
+      "o_0074",
+      "o_0073",
+      "o_0076",
+      "o_0078"
+    ],
+    "degraded_equipment": [
+      {
+        "id": "eq_fryer_2",
+        "status": "DEGRADED",
+        "capacity": 2,
+        "nominal_capacity": 3,
+        "binding": false
+      }
+    ],
+    "downstream": [
+      {
+        "station": "st_prep",
+        "queue_len": 0,
+        "status": "NORMAL"
+      },
+      {
+        "station": "st_grill",
+        "queue_len": 0,
+        "status": "NORMAL"
+      },
+      {
+        "station": "st_pass",
+        "queue_len": 0,
+        "status": "NORMAL"
+      }
+    ],
+    "summary": "Fry is OVERLOADED since 18:15:00: queue 16, oldest wait 857s, effective capacity 3 bound by staffing (eq_fryer_2 DEGRADED but not binding)."
+  },
+  "evidence_refs": [
+    {
+      "event_id": "ev_history:day1_000006",
+      "type": "ASSIGNMENT_CHANGED",
+      "ts": "2026-10-06T17:00:00-07:00",
+      "source": "staffhub",
+      "record_id": "staffhub:EMP003:2026-10-06T17:00:00-07:00:ASSIGN",
+      "record_ts": "2026-10-06T17:00:00-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.staffhub-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000283",
+      "type": "MEASUREMENT_RECORDED",
+      "ts": "2026-10-06T17:58:05-07:00",
+      "source": "iot",
+      "record_id": "iot:FRY-02:2026-10-06T17:58:05-07:00:TEMP",
+      "record_ts": "2026-10-06T17:58:05-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.iot-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000320",
+      "type": "MEASUREMENT_RECORDED",
+      "ts": "2026-10-06T18:00:40-07:00",
+      "source": "iot",
+      "record_id": "iot:FRY-02:2026-10-06T18:00:40-07:00:TEMP",
+      "record_ts": "2026-10-06T18:00:40-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.iot-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000335",
+      "type": "MEASUREMENT_RECORDED",
+      "ts": "2026-10-06T18:01:40-07:00",
+      "source": "iot",
+      "record_id": "iot:FRY-02:2026-10-06T18:01:40-07:00:TEMP",
+      "record_ts": "2026-10-06T18:01:40-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.iot-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000342",
+      "type": "EQUIPMENT_STATE_CHANGED",
+      "ts": "2026-10-06T18:02:14-07:00",
+      "source": "iot",
+      "record_id": "iot:FRY-02:2026-10-06T18:02:14-07:00:STATE",
+      "record_ts": "2026-10-06T18:02:14-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.iot-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000370",
+      "type": "HUMAN_REPORT",
+      "ts": "2026-10-06T18:04:30-07:00",
+      "source": "notes",
+      "record_id": "notes:2026-10-06T18:04:30-07:00:EMP003",
+      "record_ts": "2026-10-06T18:04:30-07:00",
+      "claim_class": "human_reported",
+      "adapter": "adapter.shift-notes-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000827",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:41:28-07:00",
+      "source": "kds",
+      "record_id": "kds:0058-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:41:28-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000848",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:43:08-07:00",
+      "source": "kds",
+      "record_id": "kds:0060-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:43:08-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000872",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:45:31-07:00",
+      "source": "kds",
+      "record_id": "kds:0061-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:45:31-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000876",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:45:43-07:00",
+      "source": "kds",
+      "record_id": "kds:0062-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:45:43-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000891",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:46:52-07:00",
+      "source": "kds",
+      "record_id": "kds:0064-3-FRY:FIRED",
+      "record_ts": "2026-10-06T18:46:52-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000895",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:47:03-07:00",
+      "source": "kds",
+      "record_id": "kds:0063-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:47:03-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000903",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:47:43-07:00",
+      "source": "kds",
+      "record_id": "kds:0065-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:47:43-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000907",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:48:34-07:00",
+      "source": "kds",
+      "record_id": "kds:0066-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:48:34-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000922",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:49:23-07:00",
+      "source": "kds",
+      "record_id": "kds:0068-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:49:23-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000961",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:52:50-07:00",
+      "source": "kds",
+      "record_id": "kds:0070-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:52:50-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000970",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:53:10-07:00",
+      "source": "kds",
+      "record_id": "kds:0071-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:53:10-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000975",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:53:32-07:00",
+      "source": "kds",
+      "record_id": "kds:0069-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:53:32-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000978",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:53:34-07:00",
+      "source": "kds",
+      "record_id": "kds:0072-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:53:34-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000992",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:54:31-07:00",
+      "source": "kds",
+      "record_id": "kds:0071-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:54:31-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_000999",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:54:59-07:00",
+      "source": "kds",
+      "record_id": "kds:0074-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:54:59-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001011",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:55:53-07:00",
+      "source": "kds",
+      "record_id": "kds:0073-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:55:53-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001013",
+      "type": "WORK_STARTED",
+      "ts": "2026-10-06T18:55:59-07:00",
+      "source": "kds",
+      "record_id": "kds:0058-1-FRY:STARTED",
+      "record_ts": "2026-10-06T18:55:59-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001025",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:57:15-07:00",
+      "source": "kds",
+      "record_id": "kds:0076-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:57:15-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001032",
+      "type": "WORK_STARTED",
+      "ts": "2026-10-06T18:58:06-07:00",
+      "source": "kds",
+      "record_id": "kds:0060-1-FRY:STARTED",
+      "record_ts": "2026-10-06T18:58:06-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001039",
+      "type": "WORK_STARTED",
+      "ts": "2026-10-06T18:58:29-07:00",
+      "source": "kds",
+      "record_id": "kds:0061-2-FRY:STARTED",
+      "record_ts": "2026-10-06T18:58:29-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001041",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:58:53-07:00",
+      "source": "kds",
+      "record_id": "kds:0076-1-FRY:FIRED",
+      "record_ts": "2026-10-06T18:58:53-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    },
+    {
+      "event_id": "ev_history:day1_001051",
+      "type": "WORK_QUEUED",
+      "ts": "2026-10-06T18:59:58-07:00",
+      "source": "kds",
+      "record_id": "kds:0078-2-FRY:FIRED",
+      "record_ts": "2026-10-06T18:59:58-07:00",
+      "claim_class": "observed",
+      "adapter": "adapter.kds-csv/0.1"
+    }
+  ],
+  "state_hash": "9542f78fe95987f2a1b226a23e3ccc00b9667e99ab5796523fb0e21ab4e048f5"
+}

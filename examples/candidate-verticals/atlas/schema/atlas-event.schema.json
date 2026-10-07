@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signalworks.dev/atlas/schema/atlas-event/0.1",
+  "title": "ATLAS Normalized Event (atlas-event/0.1)",
+  "description": "One line of the append-only ledger (NDJSON). seq is assigned by the ledger; ordering within a branch is total: (t, type rank, subject, work_id).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "event_id", "branch", "ts", "t", "type", "subject", "data", "provenance"],
+  "properties": {
+    "seq": { "type": "integer", "minimum": 1 },
+    "event_id": { "type": "string" },
+    "branch": { "type": "string", "pattern": "^(history|sim):[a-z0-9_-]+$", "description": "history:<name> for evidence-derived ledgers; sim:<name> for simulated branches" },
+    "ts": { "type": "string", "format": "date-time" },
+    "t": { "type": "integer", "description": "unix seconds; the only field the reducer orders on" },
+    "type": { "$ref": "#/$defs/event_type" },
+    "subject": { "type": "string", "description": "canonical id of the entity the event is primarily about (order, employee, equipment)" },
+    "data": { "type": "object" },
+    "provenance": { "$ref": "#/$defs/provenance" }
+  },
+  "$defs": {
+    "event_type": { "enum": ["EMPLOYEE_CLOCKED_IN", "ASSIGNMENT_CHANGED", "EQUIPMENT_STATE_CHANGED", "MEASUREMENT_RECORDED", "HUMAN_REPORT", "ORDER_CREATED", "WORK_QUEUED", "WORK_STARTED", "WORK_COMPLETED", "ORDER_READY", "ORDER_COMPLETED"] },
+    "claim_class": { "enum": ["observed", "derived", "inferred", "assumed", "simulated", "human_reported", "human_corrected"] },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["source", "record_id", "record_ts", "claim_class", "adapter"],
+      "properties": {
+        "source": { "type": "string", "description": "source system id (pos, kds, staffhub, iot, notes, simulation)" },
+        "record_id": { "type": "string", "description": "stable id of the source record; the receipt key" },
+        "record_ts": { "type": "string", "format": "date-time", "description": "timestamp as the source recorded it (event time)" },
+        "ingested_at": { "type": "string", "format": "date-time" },
+        "claim_class": { "$ref": "#/$defs/claim_class" },
+        "adapter": { "type": "string", "description": "adapter id and version, or engine version for simulated events" },
+        "derived_from": { "type": "array", "items": { "type": "string" }, "description": "parent record ids for derived/inferred claims" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "null = unquantified (distinct from 0). Only set when computed, never guessed." },
+        "note": { "type": "string" },
+        "correction_of": { "type": "string", "description": "event_id superseded by a human correction" }
+      }
+    },
+    "event_core": {
+      "type": "object", "required": ["t", "type", "subject", "data"],
+      "properties": { "t": { "type": ["integer", "string"] }, "type": { "$ref": "#/$defs/event_type" }, "subject": { "type": "string" }, "data": { "type": "object" } }
+    }
+  }
+}

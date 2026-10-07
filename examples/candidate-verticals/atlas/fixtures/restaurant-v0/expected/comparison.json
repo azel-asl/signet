@@ -1,0 +1,199 @@
+{
+  "atlas_schema": "atlas-comparison/0.1",
+  "scenario": {
+    "window": {
+      "from": "2026-10-06T18:20:00-07:00",
+      "to": "2026-10-06T19:30:00-07:00",
+      "minutes": 70
+    },
+    "orders_arrived": 65,
+    "orders_completed": 56,
+    "orders_open_at_horizon": 9,
+    "throughput_per_hour": 48,
+    "avg_kitchen_time_s": 608,
+    "p90_kitchen_time_s": 704,
+    "max_kitchen_time_s": 856,
+    "over_target_share": 0.61,
+    "max_queue": {
+      "st_fry": 6,
+      "st_prep": 7
+    },
+    "overloaded_seconds": {
+      "st_fry": 210,
+      "st_prep": 46
+    },
+    "fry_utilization_at_horizon_15m": 0.984,
+    "prep_utilization_at_horizon_15m": 0.912,
+    "revenue_completed_in_window": 1058.5,
+    "revenue_open_at_horizon": 165.5,
+    "delay_minutes_over_target": 38.7,
+    "delay_cost_assumed": {
+      "value": 13.53,
+      "claim_class": "assumed",
+      "basis": "0.35 USD per order-minute over 600s target"
+    },
+    "labor_cost_in_window": 161
+  },
+  "engine": "oracle-0.1.0",
+  "claim_class": "simulated",
+  "branch_point": "2026-10-06T18:20:00-07:00",
+  "horizon": "2026-10-06T19:30:00-07:00",
+  "arrivals": "historical_replay (identical in both branches)",
+  "baseline": {
+    "window": {
+      "from": "2026-10-06T18:20:00-07:00",
+      "to": "2026-10-06T19:30:00-07:00",
+      "minutes": 70
+    },
+    "orders_arrived": 65,
+    "orders_completed": 43,
+    "orders_open_at_horizon": 22,
+    "throughput_per_hour": 36.9,
+    "avg_kitchen_time_s": 1090,
+    "p90_kitchen_time_s": 1537,
+    "max_kitchen_time_s": 1689,
+    "over_target_share": 0.84,
+    "max_queue": {
+      "st_fry": 26,
+      "st_prep": 3
+    },
+    "overloaded_seconds": {
+      "st_fry": 4200,
+      "st_prep": 0
+    },
+    "fry_utilization_at_horizon_15m": 1,
+    "prep_utilization_at_horizon_15m": 0.473,
+    "revenue_completed_in_window": 794.5,
+    "revenue_open_at_horizon": 429.5,
+    "delay_minutes_over_target": 361.6,
+    "delay_cost_assumed": {
+      "value": 126.55,
+      "claim_class": "assumed",
+      "basis": "0.35 USD per order-minute over 600s target"
+    },
+    "labor_cost_in_window": 161
+  },
+  "delta": {
+    "orders_completed": 13,
+    "throughput_per_hour": 11.1,
+    "avg_kitchen_time_s": -482,
+    "p90_kitchen_time_s": -833,
+    "over_target_share": -0.23,
+    "max_fry_queue": -20,
+    "max_prep_queue": 4,
+    "fry_overloaded_seconds": -3990,
+    "prep_overloaded_seconds": 46,
+    "revenue_completed_in_window": 264,
+    "delay_cost_assumed": -113.02,
+    "labor_cost_in_window": 0
+  },
+  "trade_offs": [
+    "prep max queue 3 → 7; prep overloaded 0s → 46s"
+  ],
+  "honesty_notes": [
+    "Revenue delta is a timing shift of already-paid orders inside the window, not new revenue (rule R09: no lost-demand model in V0).",
+    "delay_cost_assumed is driven entirely by the ASSUMED 0.35 USD/order-minute parameter and must be labelled as such wherever shown.",
+    "Baseline simulation differs from observed day-1 history because durations are nominal; see calibration."
+  ],
+  "calibration_inputs": {
+    "observed_day1_same_window": {
+      "window": {
+        "from": "2026-10-06T18:20:00-07:00",
+        "to": "2026-10-06T19:30:00-07:00",
+        "minutes": 70
+      },
+      "orders_arrived": 65,
+      "orders_completed": 41,
+      "orders_open_at_horizon": 24,
+      "throughput_per_hour": 35.1,
+      "avg_kitchen_time_s": 1130,
+      "p90_kitchen_time_s": 1607,
+      "max_kitchen_time_s": 1787,
+      "over_target_share": 0.85,
+      "max_queue": {
+        "st_fry": 27,
+        "st_prep": 3
+      },
+      "overloaded_seconds": {
+        "st_fry": 4197,
+        "st_prep": 0
+      },
+      "fry_utilization_at_horizon_15m": 1,
+      "prep_utilization_at_horizon_15m": 0.488,
+      "revenue_completed_in_window": 761,
+      "revenue_open_at_horizon": 463,
+      "delay_minutes_over_target": 370.9,
+      "delay_cost_assumed": {
+        "value": 129.82,
+        "claim_class": "assumed",
+        "basis": "0.35 USD per order-minute over 600s target"
+      },
+      "labor_cost_in_window": 161
+    },
+    "observed_day2_same_window_with_real_move": {
+      "window": {
+        "from": "2026-10-06T18:20:00-07:00",
+        "to": "2026-10-06T19:30:00-07:00",
+        "minutes": 70
+      },
+      "orders_arrived": 50,
+      "orders_completed": 43,
+      "orders_open_at_horizon": 7,
+      "throughput_per_hour": 36.9,
+      "avg_kitchen_time_s": 624,
+      "p90_kitchen_time_s": 775,
+      "max_kitchen_time_s": 886,
+      "over_target_share": 0.6,
+      "max_queue": {
+        "st_fry": 3,
+        "st_prep": 7
+      },
+      "overloaded_seconds": {
+        "st_fry": 0,
+        "st_prep": 500
+      },
+      "fry_utilization_at_horizon_15m": 0.476,
+      "prep_utilization_at_horizon_15m": 0.959,
+      "revenue_completed_in_window": 813.5,
+      "revenue_open_at_horizon": 110,
+      "delay_minutes_over_target": 41.6,
+      "delay_cost_assumed": {
+        "value": 14.58,
+        "claim_class": "assumed",
+        "basis": "0.35 USD per order-minute over 600s target"
+      },
+      "labor_cost_in_window": 161
+    }
+  },
+  "calibration_records_example": [
+    {
+      "metric": "throughput_per_hour",
+      "prediction": {
+        "baseline": 36.9,
+        "scenario": 48,
+        "predicted_delta": 11.1
+      },
+      "observed": {
+        "day1_no_move": 35.1,
+        "day2_with_move": 36.9,
+        "observed_delta": 1.8
+      },
+      "verdict": "NOT COMPARABLE: day 2 demand (50 arrivals) is below day 1 (65); throughput is demand-bound on day 2. Calibration must condition on arrivals."
+    },
+    {
+      "metric": "avg_kitchen_time_s",
+      "prediction": {
+        "baseline": 1090,
+        "scenario": 608,
+        "predicted_delta": -482
+      },
+      "observed": {
+        "day1_no_move": 1130,
+        "day2_with_move": 624,
+        "observed_delta": -506
+      },
+      "verdict": "Direction and magnitude agree; still confounded by demand. Recorded, not yet used to change any model parameter."
+    }
+  ],
+  "calibration_rule": "Observation -> Calibration record -> explicitly approved model change. No parameter is rewritten automatically."
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signalworks.dev/atlas/schema/atlas-snapshot/0.1",
+  "title": "ATLAS WorldState Snapshot (atlas-snapshot/0.1)",
+  "description": "Materialized WorldState at time t on one branch, plus derived metrics and diagnosis. The renderer consumes exactly this. state_hash covers {state, metrics} and is the replay-equality key.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["atlas_schema", "id", "world", "branch", "mode", "claim_class", "t", "ts", "engine", "state", "metrics", "state_hash"],
+  "properties": {
+    "atlas_schema": { "const": "atlas-snapshot/0.1" },
+    "id": { "type": "string" }, "title": { "type": "string" }, "world": { "type": "string" },
+    "branch": { "type": "string" },
+    "mode": { "enum": ["RECONSTRUCT", "LIVE", "SIMULATE", "COMPOSE"] },
+    "claim_class": { "enum": ["derived", "simulated"] , "description": "derived = reduced from evidence; simulated = reduced from a sim branch. Never 'observed': a WorldState is always a derivation." },
+    "t": { "type": "integer" }, "ts": { "type": "string", "format": "date-time" },
+    "engine": { "type": "string" }, "narrative": { "type": "string" },
+    "state": {
+      "type": "object", "additionalProperties": false,
+      "required": ["t", "ts", "ledger_events_applied", "employees", "equipment", "stations", "orders_open", "work_open"],
+      "properties": {
+        "t": { "type": "integer" }, "ts": { "type": "string" }, "ledger_events_applied": { "type": "integer" },
+        "employees": { "type": "object", "additionalProperties": { "type": "object", "required": ["on_shift", "station"], "properties": { "on_shift": { "type": "boolean" }, "station": { "type": ["string", "null"] } } } },
+        "equipment": { "type": "object", "additionalProperties": { "type": "object", "required": ["status", "capacity"], "properties": { "status": { "enum": ["OPERATIONAL", "DEGRADED", "DOWN"] }, "capacity": { "type": "integer" }, "nominal_capacity": { "type": "integer" } } } },
+        "stations": { "type": "object", "additionalProperties": { "type": "object", "required": ["status", "staff", "capacity", "queue", "in_progress"], "properties": { "status": { "enum": ["NORMAL", "BUSY", "OVERLOADED", "UNSTAFFED"] }, "staff": { "type": "array", "items": { "type": "string" } }, "capacity": { "$ref": "#/$defs/capacity" }, "queue": { "type": "array", "items": { "type": "string" } }, "in_progress": { "type": "array", "items": { "type": "string" } } } } },
+        "orders_open": { "type": "array", "items": { "type": "object", "required": ["id", "state", "created", "age_s", "items", "total"] } },
+        "work_open": { "type": "array", "items": { "type": "object", "required": ["id", "order_id", "station_id", "step", "state", "queued"] } },
+        "reports": { "type": "array" }, "last_measurements": { "type": "object" }
+      }
+    },
+    "metrics": { "type": "object", "required": ["orders_open", "orders_completed", "throughput_per_hour", "avg_kitchen_time_s", "p90_kitchen_time_s", "over_target_share", "revenue_completed", "stations"] },
+    "diagnosis": { "type": "object", "required": ["claim_class", "bottleneck"], "properties": { "claim_class": { "const": "derived" }, "bottleneck": { "type": ["string", "null"] } } },
+    "evidence_refs": { "type": "array", "items": { "type": "object", "required": ["event_id", "type", "ts", "source", "record_id", "claim_class"] } },
+    "state_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  },
+  "$defs": { "capacity": { "type": "object", "required": ["equipment", "staff", "effective"], "properties": { "equipment": { "type": "integer" }, "staff": { "type": "integer" }, "effective": { "type": "integer" } } } }
+}

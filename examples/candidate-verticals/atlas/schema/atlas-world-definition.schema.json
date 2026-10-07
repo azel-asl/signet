@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signalworks.dev/atlas/schema/atlas-world-definition/0.1",
+  "title": "ATLAS World Definition (atlas-world/0.1)",
+  "description": "Provider-neutral, versioned, deterministically loadable description of an operation. Loaders MUST reject documents that fail this schema or the semantic checks listed in 03-data-model.md; they MUST NOT improvise defaults for missing required fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["atlas_schema", "metadata", "time", "entity_types", "entities", "relationships", "processes", "rules", "initial_state", "metrics", "goals"],
+  "properties": {
+    "atlas_schema": { "const": "atlas-world/0.1" },
+    "metadata": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "version", "domain"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" }, "name": { "type": "string" }, "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+        "domain": { "type": "string" }, "description": { "type": "string" },
+        "status": { "enum": ["synthetic", "reconstructed", "live"] }, "authors": { "type": "array", "items": { "type": "string" } }, "created": { "type": "string", "format": "date" }
+      }
+    },
+    "time": {
+      "type": "object", "additionalProperties": false, "required": ["unit", "timezone", "origin"],
+      "properties": { "unit": { "const": "second" }, "timezone": { "type": "string" }, "origin": { "type": "string", "format": "date-time" }, "end": { "type": "string", "format": "date-time" } }
+    },
+    "entity_types": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "$ref": "#/$defs/id" }, "attributes": { "type": "array", "items": { "type": "string" } }, "dynamic": { "type": "boolean", "description": "true for types instantiated by events (orders, work items) rather than listed in entities[]" } } }
+    },
+    "entities": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "type"], "properties": { "id": { "$ref": "#/$defs/id" }, "type": { "$ref": "#/$defs/id" }, "name": { "type": "string" }, "attrs": { "type": "object" } } }
+    },
+    "relationships": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["type", "from", "to"], "properties": { "type": { "enum": ["located_in", "attached_to", "reports_to", "depends_on", "contains", "feeds"] }, "from": { "$ref": "#/$defs/id" }, "to": { "$ref": "#/$defs/id" }, "attrs": { "type": "object" } } }
+    },
+    "aliases": {
+      "type": "object", "description": "source_id -> { source-local identifier -> canonical entity id }. Deterministic entity resolution for V0.",
+      "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/id" } }
+    },
+    "processes": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "applies_to", "steps"],
+        "properties": {
+          "id": { "$ref": "#/$defs/id" }, "applies_to": { "type": "string", "description": "a product entity id, or the literal 'order' for the order-level process" },
+          "steps": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["id", "station", "duration_s"], "properties": { "id": { "$ref": "#/$defs/id" }, "station": { "$ref": "#/$defs/id" }, "duration_s": { "type": "integer", "minimum": 1 }, "requires": { "enum": ["all_items_complete"] } } } },
+          "handoff_s": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["id", "kind", "description"],
+        "properties": { "id": { "$ref": "#/$defs/id" }, "kind": { "enum": ["station_capacity", "queue_discipline", "no_preemption", "single_assignment", "assembly_barrier", "handoff", "station_status", "skills_required", "no_balking"] }, "description": { "type": "string" }, "params": { "type": "object" } } },
+      "description": "Closed enum of rule kinds implemented by the engine. An unknown kind is a load error, never a silent no-op."
+    },
+    "initial_state": {
+      "type": "object", "additionalProperties": false, "required": ["assignments", "equipment"],
+      "properties": {
+        "clock_in": { "type": "array", "items": { "$ref": "#/$defs/id" } },
+        "assignments": { "type": "object", "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }] } },
+        "equipment": { "type": "object", "additionalProperties": { "enum": ["OPERATIONAL", "DEGRADED", "DOWN"] } }
+      }
+    },
+    "scheduled_events": { "type": "array", "items": { "$ref": "atlas-event.schema.json#/$defs/event_core" } },
+    "arrival_model": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "segments"],
+      "properties": {
+        "kind": { "enum": ["piecewise_poisson"] }, "note": { "type": "string" },
+        "segments": { "type": "array", "items": { "type": "object", "required": ["from", "to", "orders_per_hour"], "properties": { "from": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" }, "to": { "type": "string", "pattern": "^\\d{2}:\\d{2}$" }, "orders_per_hour": { "type": "number", "minimum": 0 } } } },
+        "order_mix": { "type": "object" }
+      }
+    },
+    "metrics": { "type": "array", "items": { "type": "object", "required": ["id", "unit", "definition"], "properties": { "id": { "type": "string" }, "unit": { "type": "string" }, "definition": { "type": "string" } } } },
+    "goals": { "type": "array", "items": { "type": "object", "required": ["id", "metric", "op", "target"], "properties": { "id": { "$ref": "#/$defs/id" }, "metric": { "type": "string" }, "station": { "$ref": "#/$defs/id" }, "op": { "enum": ["<=", ">=", "<", ">", "=="] }, "target": { "type": "number" }, "description": { "type": "string" } } } },
+    "economics": {
+      "type": "object", "additionalProperties": true, "required": ["currency"],
+      "properties": {
+        "currency": { "type": "string" }, "revenue_recognition": { "type": "string" },
+        "labor_cost_per_hour": { "type": "object", "additionalProperties": { "type": "number" } },
+        "delay_cost_per_order_minute_over_target": { "type": "object", "required": ["value", "claim_class"], "properties": { "value": { "type": "number" }, "claim_class": { "const": "assumed" }, "note": { "type": "string" } } },
+        "lost_demand_model": { "type": ["object", "null"] }
+      }
+    },
+    "visualization": {
+      "type": "object", "additionalProperties": false, "required": ["representation"],
+      "properties": {
+        "representation": { "enum": ["floorplan_2d", "isometric", "process_graph", "timeline", "table"] },
+        "canvas": { "type": "object", "properties": { "w": { "type": "number" }, "h": { "type": "number" } } },
+        "areas": { "type": "object", "additionalProperties": { "$ref": "#/$defs/rect" } },
+        "objects": { "type": "object", "additionalProperties": { "$ref": "#/$defs/rect" } },
+        "flows": { "type": "array", "items": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 2, "maxItems": 2 } }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "rect": { "type": "object", "required": ["x", "y", "w", "h"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "w": { "type": "number" }, "h": { "type": "number" } } }
+  }
+}
