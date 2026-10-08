@@ -312,6 +312,24 @@ async function selectEntity(entityId: string): Promise<void> {
       html += '</ul>';
     }
     body.innerHTML = html;
+    // Diagnosis section (M4 §M): read-only, displays ATLAS diagnostic output.
+    // The renderer computes nothing; lines come verbatim from /api/diagnosis.
+    try {
+      const dRes = await fetch(`/api/diagnosis?register=${currentRegister}&t=${currentT}&entity=${encodeURIComponent(entityId)}`);
+      if (dRes.ok) {
+        const dData: any = await dRes.json();
+        if (dData.lines?.length) {
+          let dHtml = '<h3>Diagnosis</h3><ul data-testid="diagnosis-lines">';
+          for (const line of dData.lines) {
+            dHtml += `<li><span data-testid="claim-class">${line.claim_class}</span> ${line.text}</li>`;
+          }
+          dHtml += '</ul>';
+          body.innerHTML += dHtml;
+        }
+      }
+    } catch {
+      // Diagnosis is optional; inspector works without it.
+    }
   } catch (e) {
     head.innerHTML = '<strong>ERROR</strong>';
     body.textContent = String(e);

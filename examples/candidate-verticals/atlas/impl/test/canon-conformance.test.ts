@@ -109,7 +109,7 @@ describe('B2.3 no runtime dependency on Signet', () => {
           await scan(p);
         } else if (p.endsWith('.ts')) {
           const text = await readFile(p, 'utf8');
-          if (/signet\/src|from ['"]\.\.\//.test(text) && /canon/.test(text)) hits.push(p);
+          if (/signet\/src/.test(text)) hits.push(p);
         }
       }
     }

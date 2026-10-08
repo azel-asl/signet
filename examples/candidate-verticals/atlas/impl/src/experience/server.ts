@@ -170,6 +170,38 @@ async function handleApi(pathname: string, params: URLSearchParams, res: ServerR
     sendJson(res, 200, st.comparison);
     return;
   }
+  if (pathname === '/api/diagnosis') {
+    const register = params.get('register') ?? '';
+    const tParam = params.get('t');
+    const entity = params.get('entity') ?? undefined;
+    if (tParam === null) {
+      sendErr(res, 'T_NOT_INTEGER', 'missing required parameter: t');
+      return;
+    }
+    const t = Number(tParam);
+    try {
+      const { diagnoseAtTime, explainDiagnosis } = await import('../capabilities.js');
+      const { world } = await loadSource();
+      const { ledger, register: regDef } = getRegister(register as RegisterKind);
+      const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch });
+      const { lines } = explainDiagnosis({ diagnosis });
+      // Filter to entity if given (server-side per §M).
+      let fDiagnosis = diagnosis;
+      let fLines = lines;
+      if (entity) {
+        fDiagnosis = { ...diagnosis, claims: diagnosis.claims.filter((c: any) => c.subject === entity) };
+        fLines = lines.filter((l: any) => {
+          const c = diagnosis.claims.find((cc: any) => cc.id === l.claim_id);
+          return c?.subject === entity;
+        });
+      }
+      sendJson(res, 200, { diagnosis: fDiagnosis, lines: fLines });
+    } catch (e: any) {
+      if (e.code) sendErr(res, e.code, e.message);
+      else sendErr(res, 'INTERNAL', 'internal error', 500);
+    }
+    return;
+  }
   sendErr(res, 'NOT_FOUND', 'not found', 404);
 }
 

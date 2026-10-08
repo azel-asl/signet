@@ -7,7 +7,10 @@ import { loadScenario } from './scenario.js';
 import { runArm, buildWorkload, canonHash, sha256FileBytes } from './simulate.js';
 import { compareScenarios as buildComparison, calibrate as buildCalibration } from './compare.js';
 import { computeWindowMetrics } from './window.js';
-import type { AtlasEvent, World } from './types.js';
+import { buildBranchLog } from './branch.js';
+import { loadWorld } from './world.js';
+import { loadLedger } from './ledger.js';
+import type { AtlasEvent, World, EvidenceRef, Seconds } from './types.js';
 
 function asJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -230,5 +233,214 @@ export function getEvidence(input: { ledger: AtlasEvent[]; subject?: string; wor
   return asJson(out);
 }
 
-export { sha256FileBytes };
+export { sha256FileBytes, canonHash, iso };
 export type { World };
+
+// ---------------------------------------------------------------------------
+// M3 source loading (17 §4): the facade is the only engine-facing import for
+// the experience layer. These load from file paths and return plain data.
+// ---------------------------------------------------------------------------
+
+/** Load a world from a JSON file path (for experience/source.ts). */
+export async function loadWorldFile(worldPath: string, schemaPath: string): Promise<World> {
+  return loadWorld(worldPath, schemaPath);
+}
+
+/** Load a ledger from an NDJSON file path (for experience/source.ts). */
+export async function loadLedgerFile(ledgerPath: string, schemaPath: string): Promise<AtlasEvent[]> {
+  const ledger = await loadLedger(ledgerPath, schemaPath);
+  return ledger.events;
+}
+
+// ---------------------------------------------------------------------------
+// M3 additive facade functions (17 §4). No change to existing signatures.
+// ---------------------------------------------------------------------------
+
+/**
+ * buildBranchLedger({ledger, branchEvents, tB}) → AtlasEvent[] in E3 order:
+ * parent events with t ≤ tB followed by the branch events.
+ */
+export function buildBranchLedger(input: {
+  ledger: AtlasEvent[];
+  branchEvents: AtlasEvent[];
+  tB: number;
+}): AtlasEvent[] {
+  return asJson(buildBranchLog(input.ledger, input.tB as Seconds, input.branchEvents));
+}
+
+/**
+ * getSupportingEvidence({world, ledger, t, entity}) → EvidenceRef[].
+ * For a station: exactly the M1 evidenceRefs(world, state(t), t, ledger, station).
+ * For any other entity: every event with t ≤ T whose subject equals the id or
+ * whose data has work_id/order_id/employee_id/equipment_id/station_id equal to
+ * the id, in ledger order.
+ */
+export function getSupportingEvidence(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  t: number;
+  entity: string;
+}): EvidenceRef[] {
+  const { world, ledger, t, entity } = input;
+  const isStation = (world.entities as { id: string; type: string }[]).some(
+    (e) => e.id === entity && e.type === 'station',
+  );
+  if (isStation) {
+    const { state } = reduceTo(world, ledger, t as Seconds);
+    return asJson(evidenceRefs(world, state, t as Seconds, ledger, entity));
+  }
+  const touchKeys = ['work_id', 'order_id', 'employee_id', 'equipment_id', 'station_id'];
+  const out: EvidenceRef[] = [];
+  for (const e of ledger) {
+    if (e.t > t) continue;
+    const d = e.data as Record<string, unknown>;
+    const touches =
+      e.subject === entity || touchKeys.some((k) => d[k] === entity);
+    if (!touches) continue;
+    out.push({
+      event_id: e.event_id,
+      type: e.type,
+      ts: e.ts,
+      source: e.provenance.source,
+      record_id: e.provenance.record_id,
+      record_ts: e.provenance.record_ts,
+      claim_class: e.provenance.claim_class,
+      adapter: e.provenance.adapter,
+      ...(e.provenance.note ? { note: e.provenance.note } : {}),
+    });
+  }
+  return asJson(out);
+}
+
+/**
+ * listInstants({ledger, from, to}) → distinct event t values with
+ * from ≤ t ≤ to, ascending.
+ */
+export function listInstants(input: {
+  ledger: AtlasEvent[];
+  from: number;
+  to: number;
+}): number[] {
+  const set = new Set<number>();
+  for (const e of input.ledger) {
+    if (e.t >= input.from && e.t <= input.to) set.add(e.t);
+  }
+  return [...set].sort((a, b) => a - b);
+}
+// ============================================================================
+
+import { diagnoseAtTime as diagnoseImpl } from './diagnose/diagnose.js';
+import { formatDiagnosis } from './diagnose/format.js';
+import type { Diagnosis, ResolvedRef } from './diagnose/types.js';
+
+/**
+ * diagnoseAtTime({world, ledger, t, branch?}) → Diagnosis.
+ * Per 18 §K. JSON in and out. Never mutates inputs. Does not rerun simulation.
+ */
+export function diagnoseAtTime(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  t: number;
+  branch?: string;
+}): Diagnosis {
+  const diagnosis = diagnoseImpl({
+    world: input.world,
+    ledger: input.ledger,
+    t: input.t,
+    branch: input.branch,
+  });
+  // Return as JSON (deep copy) to ensure no internal references leak.
+  return JSON.parse(JSON.stringify(diagnosis)) as Diagnosis;
+}
+
+/**
+ * explainDiagnosis({diagnosis, claim_id?}) → {lines: [{claim_id, text, claim_class}]}.
+ * Per 18 §K, §L. Pure function of the diagnosis.
+ */
+export function explainDiagnosis(input: {
+  diagnosis: Diagnosis;
+  claim_id?: string;
+}): { lines: { claim_id: string; text: string; claim_class: string }[] } {
+  const { diagnosis, claim_id } = input;
+  const claims = claim_id
+    ? diagnosis.claims.filter((c) => c.id === claim_id)
+    : diagnosis.claims;
+  if (claim_id && claims.length === 0) {
+    throw new Error(`unknown claim_id: ${claim_id}`);
+  }
+  const lines = formatDiagnosis(claims, diagnosis.context.claim_class);
+  return { lines };
+}
+
+/**
+ * resolveDiagnosticEvidence({world, ledger, diagnosis, claim_id}) → ResolvedRef[].
+ * Per 18 §K, §I. Resolves each ref in the claim.
+ */
+export function resolveDiagnosticEvidence(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  diagnosis: Diagnosis;
+  claim_id: string;
+}): ResolvedRef[] {
+  const { world, ledger, diagnosis, claim_id } = input;
+  const claim = diagnosis.claims.find((c) => c.id === claim_id);
+  if (!claim) {
+    throw new Error(`unknown claim_id: ${claim_id}`);
+  }
+
+  // Get the snapshot for state refs.
+  const snap = getStateAtTime({
+    world,
+    ledger,
+    t: diagnosis.context.t,
+    branch: diagnosis.context.branch,
+  }) as Record<string, unknown>;
+
+  const resolved: ResolvedRef[] = [];
+  for (const ref of claim.evidence) {
+    let value: unknown = null;
+    let refClaimClass: string | undefined;
+
+    if (ref.kind === 'event') {
+      const event = ledger.find((e) => e.event_id === ref.event_id);
+      if (event) {
+        value = {
+          event_id: event.event_id,
+          t: event.t,
+          ts: event.ts,
+          type: event.type,
+          branch: event.branch,
+          claim_class: (event.provenance as { claim_class: string }).claim_class,
+          source: (event.provenance as { source: string }).source,
+          record_id: (event.provenance as { record_id: string }).record_id,
+        };
+        refClaimClass = (event.provenance as { claim_class: string }).claim_class;
+      }
+    } else if (ref.kind === 'state') {
+      // JSON pointer into the snapshot.
+      value = resolvePointer(snap, ref.path!);
+    } else if (ref.kind === 'world') {
+      // JSON pointer into the world.
+      value = resolvePointer(world as unknown as Record<string, unknown>, ref.path!);
+    } else if (ref.kind === 'world_rule') {
+      const rules = (world.rules as { id: string }[]);
+      value = rules.find((r) => r.id === ref.rule) ?? null;
+    }
+
+    resolved.push({ ref, resolved: value, claim_class: refClaimClass });
+  }
+
+  return resolved;
+}
+
+/** Resolve a JSON pointer (RFC 6901) against an object. */
+function resolvePointer(obj: Record<string, unknown>, pointer: string): unknown {
+  if (!pointer.startsWith('/')) return null;
+  const parts = pointer.slice(1).split('/').map((p) => p.replace(/~1/g, '/').replace(/~0/g, '~'));
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current === null || typeof current !== 'object') return null;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current ?? null;
+}
