@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signalworks.dev/atlas/schema/atlas-frame/0.1",
+  "title": "ATLAS Experience Frame and Inspection (atlas-frame/0.1, atlas-inspection/0.1)",
+  "description": "Renderer-neutral, copy-only projection of a snapshot for one register at one time (17 §5, §8). Every operational value is copied from the snapshot; nothing is recomputed.",
+  "oneOf": [{ "$ref": "#/$defs/frame" }, { "$ref": "#/$defs/inspection" }],
+  "$defs": {
+    "rect": { "type": "object", "additionalProperties": false, "required": ["x", "y", "w", "h"], "properties": { "x": { "type": "number" }, "y": { "type": "number" }, "w": { "type": "number" }, "h": { "type": "number" } } },
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "register": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "branch", "mode", "claim_class", "label", "run_id", "branch_point_t", "horizon_t", "interventions"],
+      "properties": {
+        "kind": { "enum": ["observed", "baseline", "scenario"] },
+        "branch": { "type": "string", "pattern": "^(history|sim):[a-z0-9_-]+$" },
+        "mode": { "enum": ["RECONSTRUCT", "SIMULATE"] },
+        "claim_class": { "enum": ["derived", "simulated"] },
+        "label": { "type": "string", "minLength": 1 },
+        "run_id": { "type": ["string", "null"] },
+        "branch_point_t": { "type": ["integer", "null"] },
+        "horizon_t": { "type": ["integer", "null"] },
+        "range": { "type": "object", "additionalProperties": false, "required": ["min_t", "max_t"], "properties": { "min_t": { "type": "integer" }, "max_t": { "type": "integer" } } },
+        "interventions": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "employee", "from", "to", "at_t"], "properties": { "id": { "type": "string" }, "employee": { "type": "string" }, "from": { "type": ["string", "null"] }, "to": { "type": ["string", "null"] }, "at_t": { "type": "integer" } } } }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "observed" } } }, "then": { "properties": { "mode": { "const": "RECONSTRUCT" }, "claim_class": { "const": "derived" }, "branch": { "type": "string", "pattern": "^history:" } } } },
+        { "if": { "properties": { "kind": { "enum": ["baseline", "scenario"] } } }, "then": { "properties": { "mode": { "const": "SIMULATE" }, "claim_class": { "const": "simulated" }, "branch": { "type": "string", "pattern": "^sim:" } } } }
+      ]
+    },
+    "entity": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "name", "rect", "container", "state"],
+      "properties": {
+        "id": { "type": "string" },
+        "kind": { "enum": ["station", "equipment", "person", "work"] },
+        "name": { "type": "string" },
+        "rect": { "oneOf": [{ "$ref": "#/$defs/rect" }, { "type": "null" }] },
+        "container": { "type": ["string", "null"] },
+        "state": { "type": "object" }
+      }
+    },
+    "event_item": {
+      "type": "object",
+      "required": ["event_id", "t", "ts", "type", "branch", "claim_class", "source", "record_id"],
+      "properties": {
+        "event_id": { "type": "string" }, "t": { "type": "integer" }, "ts": { "type": "string" }, "type": { "type": "string" },
+        "branch": { "type": "string" }, "claim_class": { "type": "string" }, "source": { "type": "string" }, "record_id": { "type": "string" },
+        "record_ts": { "type": "string" }, "adapter": { "type": "string" }, "derived_from": { "type": "array", "items": { "type": "string" } }, "note": { "type": "string" }
+      }
+    },
+    "frame": {
+      "type": "object", "additionalProperties": false,
+      "required": ["atlas_schema", "experience_version", "world", "register", "t", "ts", "range", "snapshot_state_hash", "ledger_events_applied", "layout", "entities", "open_orders", "metrics", "frame_hash"],
+      "properties": {
+        "atlas_schema": { "const": "atlas-frame/0.1" },
+        "experience_version": { "type": "string" },
+        "world": { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string" }, "name": { "type": "string" } } },
+        "register": { "$ref": "#/$defs/register" },
+        "t": { "type": "integer" }, "ts": { "type": "string" },
+        "range": { "type": "object", "additionalProperties": false, "required": ["min_t", "max_t"], "properties": { "min_t": { "type": "integer" }, "max_t": { "type": "integer" } } },
+        "snapshot_state_hash": { "$ref": "#/$defs/hash" },
+        "ledger_events_applied": { "type": "integer", "minimum": 0 },
+        "layout": { "type": "object", "additionalProperties": false, "required": ["canvas", "areas", "flows"], "properties": { "canvas": { "type": "object", "required": ["w", "h"], "properties": { "w": { "type": "number" }, "h": { "type": "number" } } }, "areas": { "type": "object", "additionalProperties": { "$ref": "#/$defs/rect" } }, "flows": { "type": "array", "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 } } } },
+        "entities": { "type": "array", "items": { "$ref": "#/$defs/entity" } },
+        "open_orders": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["id", "state", "created", "age_s", "items", "total"], "properties": { "id": { "type": "string" }, "state": { "type": "string" }, "created": { "type": "string" }, "age_s": { "type": "integer" }, "items": { "type": "array", "items": { "type": "string" } }, "total": { "type": "number" } } } },
+        "metrics": { "type": "object", "additionalProperties": false, "required": ["orders_open", "orders_completed", "throughput_per_hour", "avg_kitchen_time_s", "p90_kitchen_time_s", "over_target_share"], "properties": { "orders_open": { "type": "integer" }, "orders_completed": { "type": "integer" }, "throughput_per_hour": { "type": "number" }, "avg_kitchen_time_s": { "type": ["number", "null"] }, "p90_kitchen_time_s": { "type": ["number", "null"] }, "over_target_share": { "type": ["number", "null"] } } },
+        "frame_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "inspection": {
+      "type": "object", "additionalProperties": false,
+      "required": ["atlas_schema", "register", "t", "ts", "entity", "relationships", "evidence", "evidence_total", "related_events", "related_events_total", "inspection_hash"],
+      "properties": {
+        "atlas_schema": { "const": "atlas-inspection/0.1" },
+        "register": { "$ref": "#/$defs/register" },
+        "t": { "type": "integer" }, "ts": { "type": "string" },
+        "entity": { "$ref": "#/$defs/entity" },
+        "relationships": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["type", "from", "to"], "properties": { "type": { "type": "string" }, "from": { "type": "string" }, "to": { "type": "string" } } } },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/event_item" } },
+        "evidence_total": { "type": "integer", "minimum": 0 },
+        "related_events": { "type": "array", "maxItems": 50, "items": { "$ref": "#/$defs/event_item" } },
+        "related_events_total": { "type": "integer", "minimum": 0 },
+        "inspection_hash": { "$ref": "#/$defs/hash" }
+      }
+    }
+  }
+}
