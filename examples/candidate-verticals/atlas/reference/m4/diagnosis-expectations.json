@@ -1,0 +1,895 @@
+{
+  "atlas_schema": "atlas-m4-expectations/0.1",
+  "generated_by": "reference/m4/derive-expectations.mjs",
+  "window_s": 900,
+  "note": "Semantic answer key, not a frozen output. Values derived from R01/R05/R07 over frozen artifacts only.",
+  "cases": [
+    {
+      "register": "observed",
+      "branch": "history:day1",
+      "claim_class": "derived",
+      "t": 1791333900,
+      "ts": "2026-10-06T17:45:00-07:00",
+      "snapshot": "snapshots/s1_normal.json",
+      "snapshot_state_hash": "7d7139243bb43c08bb910bb7a641588b685c154b4178c11874d60250b70f71bd",
+      "overload_onset_ts": null,
+      "stations": {
+        "st_prep": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 900,
+            "capacity_work_s": 3600,
+            "ratio": 0.25,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0012",
+              "o_0013"
+            ],
+            "sole_remaining_blocker_for": []
+          }
+        },
+        "st_grill": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 960,
+            "capacity_work_s": 3600,
+            "ratio": 0.27,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0010"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0010"
+            ]
+          }
+        },
+        "st_fry": {
+          "status": "BUSY",
+          "overloaded": false,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 3,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 2700,
+            "capacity_work_s": 2700,
+            "ratio": 1,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 1
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0011",
+              "o_0012",
+              "o_0013"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0011"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 360,
+            "capacity_work_s": 1800,
+            "ratio": 0.2,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    },
+    {
+      "register": "observed",
+      "branch": "history:day1",
+      "claim_class": "derived",
+      "t": 1791335280,
+      "ts": "2026-10-06T18:08:00-07:00",
+      "snapshot": "snapshots/s2_bottleneck_emerging.json",
+      "snapshot_state_hash": "765d5cb501eccb71fcf890ecb89773ac207f325954c192c34306018186bb06b6",
+      "overload_onset_ts": null,
+      "stations": {
+        "st_prep": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1710,
+            "capacity_work_s": 3600,
+            "ratio": 0.47,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0030",
+              "o_0031"
+            ],
+            "sole_remaining_blocker_for": []
+          }
+        },
+        "st_grill": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 2400,
+            "capacity_work_s": 3600,
+            "ratio": 0.67,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0025",
+              "o_0028",
+              "o_0029"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0025"
+            ]
+          }
+        },
+        "st_fry": {
+          "status": "BUSY",
+          "overloaded": false,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [
+            {
+              "id": "eq_fryer_2",
+              "status": "DEGRADED",
+              "restoring_raises_effective": false
+            }
+          ],
+          "demand_vs_capacity": {
+            "demand_work_s": 3900,
+            "capacity_work_s": 2700,
+            "ratio": 1.44,
+            "exceeds": true
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 4
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0021",
+              "o_0022",
+              "o_0027",
+              "o_0028",
+              "o_0029",
+              "o_0030",
+              "o_0031"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0021",
+              "o_0022",
+              "o_0027"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 810,
+            "capacity_work_s": 1800,
+            "ratio": 0.45,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    },
+    {
+      "register": "observed",
+      "branch": "history:day1",
+      "claim_class": "derived",
+      "t": 1791336000,
+      "ts": "2026-10-06T18:20:00-07:00",
+      "snapshot": "snapshots/s3_bottleneck_active.json",
+      "snapshot_state_hash": "67f66b29b3f98237825b633f095ea1da56b4c4dbdf5e072c80b1b9faf4fefa84",
+      "overload_onset_ts": "2026-10-06T18:15:00-07:00",
+      "stations": {
+        "st_prep": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1170,
+            "capacity_work_s": 3600,
+            "ratio": 0.33,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        },
+        "st_grill": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1680,
+            "capacity_work_s": 3600,
+            "ratio": 0.47,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0037",
+              "o_0038"
+            ],
+            "sole_remaining_blocker_for": []
+          }
+        },
+        "st_fry": {
+          "status": "OVERLOADED",
+          "overloaded": true,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [
+            {
+              "id": "eq_fryer_2",
+              "status": "DEGRADED",
+              "restoring_raises_effective": false
+            }
+          ],
+          "demand_vs_capacity": {
+            "demand_work_s": 4200,
+            "capacity_work_s": 2700,
+            "ratio": 1.56,
+            "exceeds": true
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 2,
+            "queue_at_t": 5
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0033",
+              "o_0034",
+              "o_0035",
+              "o_0036",
+              "o_0037",
+              "o_0038"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0033",
+              "o_0034",
+              "o_0035",
+              "o_0036"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1080,
+            "capacity_work_s": 1800,
+            "ratio": 0.6,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    },
+    {
+      "register": "observed",
+      "branch": "history:day1",
+      "claim_class": "derived",
+      "t": 1791338400,
+      "ts": "2026-10-06T19:00:00-07:00",
+      "snapshot": "expected/s4_observed_reference.json",
+      "snapshot_state_hash": "8de373a7d10fa05056c3227a81ff9f154a8d74de16ae2a4e94cc0132010cc42e",
+      "overload_onset_ts": "2026-10-06T18:15:00-07:00",
+      "stations": {
+        "st_prep": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1800,
+            "capacity_work_s": 3600,
+            "ratio": 0.5,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0077",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0077"
+            ]
+          }
+        },
+        "st_grill": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 2160,
+            "capacity_work_s": 3600,
+            "ratio": 0.6,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0072",
+              "o_0074",
+              "o_0075"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0075"
+            ]
+          }
+        },
+        "st_fry": {
+          "status": "OVERLOADED",
+          "overloaded": true,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [
+            {
+              "id": "eq_fryer_2",
+              "status": "DEGRADED",
+              "restoring_raises_effective": false
+            }
+          ],
+          "demand_vs_capacity": {
+            "demand_work_s": 5100,
+            "capacity_work_s": 2700,
+            "ratio": 1.89,
+            "exceeds": true
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 9,
+            "queue_at_t": 16
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0058",
+              "o_0060",
+              "o_0061",
+              "o_0062",
+              "o_0063",
+              "o_0064",
+              "o_0065",
+              "o_0066",
+              "o_0068",
+              "o_0069",
+              "o_0070",
+              "o_0071",
+              "o_0072",
+              "o_0073",
+              "o_0074",
+              "o_0076",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0058",
+              "o_0060",
+              "o_0061",
+              "o_0062",
+              "o_0063",
+              "o_0064",
+              "o_0065",
+              "o_0066",
+              "o_0068",
+              "o_0069",
+              "o_0070",
+              "o_0071",
+              "o_0073",
+              "o_0076"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 810,
+            "capacity_work_s": 1800,
+            "ratio": 0.45,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    },
+    {
+      "register": "baseline",
+      "branch": "sim:baseline",
+      "claim_class": "simulated",
+      "t": 1791338400,
+      "ts": "2026-10-06T19:00:00-07:00",
+      "snapshot": "expected/s4b_simulated_baseline.json",
+      "snapshot_state_hash": "312746ac03c6409554176a424546ae14233b5fc838b695672e6f7710a8e3907d",
+      "overload_onset_ts": "2026-10-06T18:15:00-07:00",
+      "stations": {
+        "st_prep": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1800,
+            "capacity_work_s": 3600,
+            "ratio": 0.5,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0077",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0077"
+            ]
+          }
+        },
+        "st_grill": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 2160,
+            "capacity_work_s": 3600,
+            "ratio": 0.6,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 1,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0074",
+              "o_0075"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0075"
+            ]
+          }
+        },
+        "st_fry": {
+          "status": "OVERLOADED",
+          "overloaded": true,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [
+            {
+              "id": "eq_fryer_2",
+              "status": "DEGRADED",
+              "restoring_raises_effective": false
+            }
+          ],
+          "demand_vs_capacity": {
+            "demand_work_s": 5100,
+            "capacity_work_s": 2700,
+            "ratio": 1.89,
+            "exceeds": true
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 10,
+            "queue_at_t": 15
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0060",
+              "o_0061",
+              "o_0062",
+              "o_0063",
+              "o_0064",
+              "o_0065",
+              "o_0066",
+              "o_0068",
+              "o_0069",
+              "o_0070",
+              "o_0071",
+              "o_0072",
+              "o_0073",
+              "o_0074",
+              "o_0076",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0060",
+              "o_0061",
+              "o_0062",
+              "o_0063",
+              "o_0064",
+              "o_0065",
+              "o_0066",
+              "o_0068",
+              "o_0069",
+              "o_0070",
+              "o_0071",
+              "o_0072",
+              "o_0073",
+              "o_0076"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 990,
+            "capacity_work_s": 1800,
+            "ratio": 0.55,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    },
+    {
+      "register": "scenario",
+      "branch": "sim:scenario",
+      "claim_class": "simulated",
+      "t": 1791338400,
+      "ts": "2026-10-06T19:00:00-07:00",
+      "snapshot": "snapshots/s4_simulated_intervention.json",
+      "snapshot_state_hash": "32938d5839d94c4fe60212c1f3c77e2093c5b636ce156d30e409d913dd94fc66",
+      "overload_onset_ts": null,
+      "stations": {
+        "st_prep": {
+          "status": "BUSY",
+          "overloaded": false,
+          "at_capacity": true,
+          "backlogged": true,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1800,
+            "capacity_work_s": 1800,
+            "ratio": 1,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 1,
+            "queue_at_t": 2
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0076",
+              "o_0077",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0077"
+            ]
+          }
+        },
+        "st_grill": {
+          "status": "BUSY",
+          "overloaded": false,
+          "at_capacity": true,
+          "backlogged": false,
+          "limitation": "STAFF",
+          "marginal": {
+            "add_one_staff": 4,
+            "add_one_equipment_slot": 0
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 2640,
+            "capacity_work_s": 3600,
+            "ratio": 0.73,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0070",
+              "o_0072",
+              "o_0074",
+              "o_0075"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0070",
+              "o_0072",
+              "o_0074",
+              "o_0075"
+            ]
+          }
+        },
+        "st_fry": {
+          "status": "BUSY",
+          "overloaded": false,
+          "at_capacity": true,
+          "backlogged": false,
+          "limitation": "EQUIPMENT",
+          "marginal": {
+            "add_one_staff": 0,
+            "add_one_equipment_slot": 1
+          },
+          "degraded_equipment": [
+            {
+              "id": "eq_fryer_2",
+              "status": "DEGRADED",
+              "restoring_raises_effective": true
+            }
+          ],
+          "demand_vs_capacity": {
+            "demand_work_s": 5100,
+            "capacity_work_s": 4500,
+            "ratio": 1.13,
+            "exceeds": true
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [
+              "o_0069",
+              "o_0071",
+              "o_0073",
+              "o_0076",
+              "o_0078"
+            ],
+            "sole_remaining_blocker_for": [
+              "o_0069",
+              "o_0071",
+              "o_0073"
+            ]
+          }
+        },
+        "st_pass": {
+          "status": "NORMAL",
+          "overloaded": false,
+          "at_capacity": false,
+          "backlogged": false,
+          "limitation": "DEMAND",
+          "marginal": {
+            "add_one_staff": 2,
+            "add_one_equipment_slot": null
+          },
+          "degraded_equipment": [],
+          "demand_vs_capacity": {
+            "demand_work_s": 1350,
+            "capacity_work_s": 1800,
+            "ratio": 0.75,
+            "exceeds": false
+          },
+          "backlog_growth": {
+            "queue_at_window_start": 0,
+            "queue_at_t": 0
+          },
+          "assembly_blocking": {
+            "orders_with_pending_work": [],
+            "sole_remaining_blocker_for": []
+          }
+        }
+      }
+    }
+  ]
+}
