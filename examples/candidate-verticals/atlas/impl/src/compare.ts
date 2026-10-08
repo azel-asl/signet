@@ -4,6 +4,7 @@
 // Calibration: observed history vs simulated baseline = model error.
 // They are different document types; the builders refuse each other's inputs.
 import { iso } from './views.js';
+import { canonHash } from './simulate.js';
 import type { Seconds, World } from './types.js';
 import type { WindowMetrics } from './window.js';
 import type { ArmResult, RunReceipt } from './simulate.js';
@@ -60,9 +61,44 @@ function scalarDelta(a: number | null, b: number | null): number | null {
 }
 
 /**
- * Build the counterfactual comparison. Refuses unless both receipts are sim:*,
- * one baseline and one scenario arm, with equal workload, branch point,
- * horizon, world and engine version.
+ * Verify an arm result before use (Condition 2). The receipt is a cryptographic
+ * commitment: receipt_sha256 covers the whole receipt including
+ * outputs.window_metrics_sha256, which commits to the metrics. Verification:
+ * 1. receipt integrity (receipt_sha256 recomputes),
+ * 2. metrics hash (supplied metrics match the receipt's commitment),
+ * 3. required arm identity,
+ * 4. required claim semantics (sim:<arm>:<id> branch, arm matches).
+ * Tampered, mismatched, or forged metrics are rejected, not recomputed.
+ */
+function verifyArmResult(arm: ArmResult, expectedArm: 'baseline' | 'scenario'): void {
+  const receipt = arm.receipt as RunReceipt;
+  const { receipt_sha256, ...rest } = receipt;
+  if (canonHash(rest) !== receipt_sha256) {
+    throw new ComparisonError('COMPARE_RECEIPT_TAMPERED', 'receipt_sha256 does not recompute from receipt content');
+  }
+  if (canonHash(arm.windowMetrics) !== receipt.outputs.window_metrics_sha256) {
+    throw new ComparisonError(
+      'COMPARE_METRICS_MISMATCH',
+      'supplied window metrics do not match the receipt window_metrics_sha256 commitment',
+    );
+  }
+  if (receipt.arm !== expectedArm) {
+    throw new ComparisonError('COMPARE_ARM_MISMATCH', `expected ${expectedArm} arm, got ${receipt.arm}`);
+  }
+  const m = /^sim:(baseline|scenario)$/.exec(receipt.branch);
+  if (!m) {
+    throw new ComparisonError('COMPARE_BRANCH_NOT_SIMULATED', `branch '${receipt.branch}' is not a simulated branch`);
+  }
+  if (m[1] !== expectedArm) {
+    throw new ComparisonError('COMPARE_BRANCH_ARM_MISMATCH', `branch arm '${m[1]}' does not match expected '${expectedArm}'`);
+  }
+}
+
+/**
+ * Build the counterfactual comparison. Verifies both arm results (receipt
+ * integrity, metrics hash, arm identity, claim semantics) and refuses unless
+ * both receipts are sim:*, one baseline and one scenario arm, with equal
+ * workload, branch point, horizon, world and engine version.
  */
 export function compareScenarios(
   world: World,
@@ -70,14 +106,10 @@ export function compareScenarios(
   scenario: ArmResult,
   scenarioId: string,
 ): Comparison {
+  verifyArmResult(baseline, 'baseline');
+  verifyArmResult(scenario, 'scenario');
   const rb: RunReceipt = baseline.receipt;
   const rs: RunReceipt = scenario.receipt;
-  if (!rb.branch.startsWith('sim:') || !rs.branch.startsWith('sim:')) {
-    throw new ComparisonError('COMPARE_OBSERVED_INPUT', 'comparison requires two simulated arms');
-  }
-  if (rb.arm !== 'baseline' || rs.arm !== 'scenario') {
-    throw new ComparisonError('COMPARE_ARM_MISMATCH', 'need one baseline arm and one scenario arm');
-  }
   const eq = (a: unknown, b: unknown, code: string, what: string) => {
     if (JSON.stringify(a) !== JSON.stringify(b)) throw new ComparisonError(code, `${what} differs between arms`);
   };
@@ -156,7 +188,9 @@ export interface Calibration {
 
 /**
  * Build the calibration (observed history vs simulated baseline).
- * Refuses a scenario arm and a non-history:* observed side.
+ * Verifies the baseline arm result (receipt integrity, metrics hash, arm
+ * identity, simulated claim semantics). Refuses a scenario arm and a
+ * non-history:* observed side.
  */
 export function calibrate(
   baseline: ArmResult,
@@ -165,8 +199,9 @@ export function calibrate(
   observedLedgerSha256: string,
   observedWorkloadSha256: string,
 ): Calibration {
-  if (baseline.receipt.arm !== 'baseline') {
-    throw new ComparisonError('CALIBRATION_REQUIRES_BASELINE', 'calibration requires the baseline arm, not a scenario arm');
+  verifyArmResult(baseline, 'baseline');
+  if (observedBranch.startsWith('sim:')) {
+    throw new ComparisonError('CALIBRATION_OBSERVED_BRANCH', 'observed side must not be a simulated branch');
   }
   if (!observedBranch.startsWith('history:')) {
     throw new ComparisonError('CALIBRATION_OBSERVED_BRANCH', 'observed side must be a history:* branch');

@@ -143,3 +143,27 @@ minting, intervention event shape (`reason: 'intervention:<id>'`), replayed-arri
 provenance (`claim_class: observed` + note), and the reduction-order sort for E6
 numbering. The frozen `comparison.json` confirmed the window-metrics sampling
 (CCR-004) and the §H comparison mapping. No oracle code appears in `src/`.
+
+## D19 — M2 conditional-pass corrections (Opus review, 2026-10-07)
+Source: Opus independent M2 review (CONDITIONAL PASS). Four conditions only;
+no engine redesign, no M3, no frozen-artifact changes, no reducer/scheduler
+semantic changes.
+
+- C1: `getStateAtTime` now derives mode/claim_class/arm from the ledger itself
+  (`classifyLedger` scans `provenance.claim_class`; simulated events carry the
+  `sim:<arm>` branch id). Caller-supplied `branch` is verified against the
+  derived classification; mismatch throws `GetStateError`. A simulated ledger
+  can never silently appear historical. Output adds `arm` for simulated.
+- C2: `compareScenarios`/`calibrate` now call `verifyArmResult` before use:
+  receipt_sha256 recomputes, `canonHash(windowMetrics)` matches the receipt's
+  `window_metrics_sha256` commitment, arm identity matches, branch is
+  `sim:<arm>` with matching arm. Tampered/mismatched/forged metrics are
+  rejected (COMPARE_RECEIPT_TAMPERED / COMPARE_METRICS_MISMATCH /
+  COMPARE_ARM_MISMATCH / COMPARE_BRANCH_NOT_SIMULATED).
+- C3: `runScenario` computes authoritative XAS-CANON-1 hashes from the actual
+  world object and ledger array used in the run (`canonHash(world)`,
+  `canonHash(ledger)`); the scenario file hash comes from `loadScenario`
+  itself. Optional `expected*` inputs are assertions only; mismatch throws
+  `RunScenarioError`. The receipt records computed hashes, never caller-supplied.
+- C4: child-process determinism test derives `dist/` and repo paths from
+  `import.meta.url` via env vars; no `/home/hatch` hardcode.

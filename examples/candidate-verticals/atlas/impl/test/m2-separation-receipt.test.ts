@@ -24,11 +24,18 @@ describe('F11 comparison/calibration separation', () => {
 
   it('compareScenarios refuses mismatched workload', async () => {
     const { world, baseline, scenarioArm, scenario } = await m2Setup();
+    const { canonHash: ch } = await import('../src/simulate.js');
+    // Tamper the workload hash and recompute the receipt hash so integrity
+    // passes but the workload compatibility check fails.
+    const tamperedInputs = {
+      ...scenarioArm.receipt.inputs,
+      workload: { ...scenarioArm.receipt.inputs.workload, workload_sha256: 'dead' },
+    };
+    const tamperedReceipt: any = { ...scenarioArm.receipt, inputs: tamperedInputs };
+    const { receipt_sha256: _x, ...rest } = tamperedReceipt;
+    tamperedReceipt.receipt_sha256 = ch(rest);
     const tampered: any = {
-      receipt: {
-        ...scenarioArm.receipt,
-        inputs: { ...scenarioArm.receipt.inputs, workload: { ...scenarioArm.receipt.inputs.workload, workload_sha256: 'dead' } },
-      },
+      receipt: tamperedReceipt,
       windowMetrics: scenarioArm.windowMetrics,
       branch: scenarioArm.branch,
     };
@@ -39,7 +46,7 @@ describe('F11 comparison/calibration separation', () => {
     const { scenarioArm } = await m2Setup();
     expect(() =>
       calibrate(scenarioArm as any, scenarioArm.windowMetrics, 'history:day1', 'x', 'y'),
-    ).toThrow(/CALIBRATION_REQUIRES_BASELINE/);
+    ).toThrow(/COMPARE_ARM_MISMATCH/);
   });
 
   it('calibrate refuses a sim: observed side', async () => {

@@ -45,12 +45,20 @@ describe('F8 determinism', () => {
 
   it('run in a child process → identical receipt', async () => {
     const { baseline } = await m2Setup();
-    const { stdout } = await execFileP('node', [
-      '-e',
-      `
+    // Portable paths derived from the test file location (no machine hardcode).
+    const { fileURLToPath } = await import('node:url');
+    const { dirname, join } = await import('node:path');
+    const testDir = dirname(fileURLToPath(import.meta.url));
+    const implDir = dirname(testDir);
+    const atlasDir = dirname(implDir);
+    const { stdout } = await execFileP(
+      'node',
+      [
+        '-e',
+        `
       (async () => {
-        const I = '/home/hatch/workspace/atlas-src/atlas-work/examples/candidate-verticals/atlas/impl/dist';
-        const A = '/home/hatch/workspace/atlas-src/atlas-work/examples/candidate-verticals/atlas';
+        const I = process.env.ATLAS_IMPL_DIST;
+        const A = process.env.ATLAS_DIR;
         const {readFile} = await import('node:fs/promises');
         const {loadWorld} = await import(I + '/src/world.js');
         const {loadLedger} = await import(I + '/src/ledger.js');
@@ -69,7 +77,15 @@ describe('F8 determinism', () => {
         console.log(r.receipt.receipt_sha256);
       })();
       `,
-    ]);
+      ],
+      {
+        env: {
+          ...process.env,
+          ATLAS_IMPL_DIST: join(implDir, 'dist'),
+          ATLAS_DIR: atlasDir,
+        },
+      },
+    );
     expect(stdout.trim()).toBe(baseline.receipt.receipt_sha256);
   });
 });

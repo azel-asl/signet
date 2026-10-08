@@ -17,11 +17,9 @@ describe('F13 capability facade', () => {
   });
 
   it('runScenario output round-trips; both arms present', async () => {
-    const { world, ledger, manifest } = await m2Setup();
+    const { world, ledger } = await m2Setup();
     const out = await runScenario({
       world, ledger: ledger.events, scenarioPath: SCENARIO_FILE,
-      worldSha256: manifest.world_sha256,
-      parentLedgerSha256: manifest.files['normalized/events.ndjson'],
     });
     expect(JSON.parse(JSON.stringify(out))).toEqual(out);
     expect((out.baseline.receipt as any).outputs.events_generated).toBe(872);
@@ -29,11 +27,9 @@ describe('F13 capability facade', () => {
   });
 
   it('compareScenarios facade output round-trips', async () => {
-    const { world, ledger, manifest, scenario } = await m2Setup();
+    const { world, ledger, scenario } = await m2Setup();
     const { baseline, scenario: scn } = await runScenario({
       world, ledger: ledger.events, scenarioPath: SCENARIO_FILE,
-      worldSha256: manifest.world_sha256,
-      parentLedgerSha256: manifest.files['normalized/events.ndjson'],
     });
     const cmp: any = compareScenariosFacade({ world, baseline, scenario: scn, scenarioId: scenario.id });
     expect(JSON.parse(JSON.stringify(cmp))).toEqual(cmp);
@@ -44,8 +40,6 @@ describe('F13 capability facade', () => {
     const { world, ledger, manifest, scenario } = await m2Setup();
     const { baseline } = await runScenario({
       world, ledger: ledger.events, scenarioPath: SCENARIO_FILE,
-      worldSha256: manifest.world_sha256,
-      parentLedgerSha256: manifest.files['normalized/events.ndjson'],
     });
     const cal: any = calibrateFacade({
       world, baseline, observedLedger: ledger.events, observedBranch: 'history:day1',
