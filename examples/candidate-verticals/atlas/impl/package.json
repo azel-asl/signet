@@ -9,7 +9,10 @@
   "scripts": {
     "test": "vitest run",
     "build": "tsc",
-    "parity": "npm run build --silent && node dist/scripts/parity.js"
+    "parity": "npm run build --silent && node dist/scripts/parity.js",
+    "experience": "npm run build:web --silent && node dist/scripts/experience.js",
+    "test:e2e": "playwright test",
+    "build:web": "npm run build --silent && node dist/scripts/build-web.js"
   },
   "keywords": [],
   "author": "",
@@ -17,7 +20,10 @@
   "type": "module",
   "private": "true",
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/node": "^26.6.4",
+    "ajv": "^8.20.0",
+    "playwright": "^1.64.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"
   }

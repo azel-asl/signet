@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATLAS Experience — Restaurant World</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <header id="register-bar">
+    <div id="register-toggle" role="tablist" aria-label="Register">
+      <button data-register-btn="observed" role="tab">Observed</button>
+      <button data-register-btn="baseline" role="tab">Baseline</button>
+      <button data-register-btn="scenario" role="tab">Scenario</button>
+    </div>
+    <div id="banner" data-testid="banner"></div>
+  </header>
+
+  <div id="timeline">
+    <div id="time-readout" data-testid="time-readout"></div>
+    <button id="btn-prev" aria-label="Previous event">‹</button>
+    <button id="btn-play" aria-label="Play or pause">▶</button>
+    <button id="btn-next" aria-label="Next event">›</button>
+    <label>Speed <input id="speed" type="number" value="60" min="1" max="3600"></label>
+    <input id="scrub" type="range" data-testid="scrub" aria-label="Scrub timeline">
+    <div id="timeline-track" data-testid="timeline-track"></div>
+    <div id="timeline-notice" data-testid="timeline-notice"></div>
+  </div>
+
+  <main>
+    <section id="floorplan-section">
+      <div id="floorplan-wrap">
+        <svg id="floorplan" data-testid="floorplan" role="img" aria-label="Restaurant floor plan"></svg>
+        <div id="loading-overlay" hidden>loading…</div>
+      </div>
+      <div id="error-card" data-testid="error-card" hidden></div>
+    </section>
+    <aside id="side-panel">
+      <div id="orders-panel">
+        <h2>Open orders</h2>
+        <ul id="orders-list" data-testid="orders-list"></ul>
+      </div>
+      <div id="inspector-panel">
+        <h2>Inspector</h2>
+        <div id="inspector-head" data-testid="inspector-head"></div>
+        <div id="inspector-body" data-testid="inspector-body"></div>
+      </div>
+      <div id="comparison-panel">
+        <h2 data-testid="comparison-title">COUNTERFACTUAL COMPARISON · baseline vs scenario · simulated</h2>
+        <div id="comparison-body" data-testid="comparison-body"></div>
+        <div id="honesty-notes" data-testid="honesty-notes"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

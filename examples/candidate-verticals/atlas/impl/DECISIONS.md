@@ -167,3 +167,55 @@ semantic changes.
   `RunScenarioError`. The receipt records computed hashes, never caller-supplied.
 - C4: child-process determinism test derives `dist/` and repo paths from
   `import.meta.url` via env vars; no `/home/hatch` hardcode.
+
+## D20 — M3 experience implementation (2026-10-08)
+Source: 17-m3-experience-contract-and-muse-handoff.md (frozen 40ab1fc).
+
+- Architecture: ATLAS engine → capabilities.ts (3 additive M3 functions:
+  buildBranchLedger, getSupportingEvidence, listInstants) → experience/
+  (project.ts: projectFrame/inspectEntity copy-only projection; source.ts:
+  fixture paths isolated; server.ts: node:http on 127.0.0.1) → web/ (vanilla
+  TS + SVG, no framework).
+- ExperienceFrame is copy-only per §5.2; frame_hash = canonHash(frame minus
+  frame_hash). Register labels verbatim from §7. Simulated arms get the
+  diagonal SIMULATED watermark and hatched station fills.
+- The renderer owns no operational truth: status strings map via fixed lookup
+  tables; all values copied verbatim. T10 static scan enforced; Math.min/max
+  only in web/layout.ts.
+- T17: experience/ imports only capabilities.ts, experience/*, node:* (added
+  loadWorldFile/loadLedgerFile and re-exported canonHash/iso via capabilities
+  to satisfy the boundary).
+- Playwright is a devDependency only; zero runtime dependencies added.
+- ENGINE_VERSION unchanged (atlas-impl/0.2.0); EXPERIENCE_VERSION =
+  atlas-experience/0.1.0.
+- No engine, fixture, oracle, or M1/M2 reference changes. Receipt-identity hard
+  gate (§16) preserved; M3 does not file the CCR.
+
+## D21 — M3 correction pass (Opus FAIL review, 2026-10-08)
+Source: Opus independent M3 review (FAIL; architecture passed).
+
+- Item 0: Remote branch was missing frozen M3 contract/schema due to API
+  content-sync not preserving history. Restored both files byte-identical
+  from 40ab1fc via API push. Local branch has 40ab1fc as ancestor.
+- Item 1: Added scripts/build-web.ts; `npm run build:web` produces
+  web/dist/{index.html,styles.css,app.js,layout.js} with no manual copying.
+  `npm run experience` = build:web + start service.
+- Item 2: Initial time now comes from /api/world `initial_t` (server-derived
+  from world origin date at 18:20), not from timeToSec("18:20") string.
+- Item 3: Added <input type="range" data-testid="scrub"> bound to the
+  register's integer-second range; change requests a real ATLAS frame.
+- Item 4: Fixed ledger_events_applied to copy from snap.state (not snap).
+  Added T4b schema validation against frozen atlas-frame.schema.json.
+- Item 5: Banner now uses ISO strings (new Date(t*1000).toISOString()) for
+  branch_point/horizon/interventions; time readout uses frame.ts.
+- Item 7: Inspector has inspectSeqNum/lastPaintedInspectSeq stale-response
+  protection.
+- Item 8: ENTITY_NOT_PRESENT vs UNKNOWN_ENTITY: work_ids in ledger count as
+  "known" (not just world.entities).
+- Item 9: STATUS_CLASS uses NORMAL (not OK); evidence branch looked up from
+  ledger; missing t param returns T_NOT_INTEGER; removed committed
+  types.js and test-results artifacts.
+- Item 10 (flows): The contract §5.1 requires `flows` in the frame layout
+  (copied from world.visualization.flows — implemented). Visual flow-arrow
+  rendering is not explicitly required for M3 PASS; the renderer includes
+  the data but does not draw arrows. Presentational, not correctness.
