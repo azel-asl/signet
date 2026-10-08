@@ -25,8 +25,10 @@ test.describe('T12 browser binding', () => {
       const frameRes = await page.request.get(`${baseURL}/api/frame?register=${c.register}&t=${t}`);
       expect(frameRes.ok()).toBe(true);
       const frame = await frameRes.json();
-      // Load the UI and navigate to the same (register, t).
+      // Load the UI and wait for the real initial frame to settle before
+      // injecting test state (avoids racing the application's startup request).
       await page.goto(`${baseURL}/`);
+      await page.waitForSelector('#floorplan[data-t]', { timeout: 30000 });
       // Use the exposed test hook to render the exact frame (deterministic).
       // For a true binding test, we drive the UI via its controls below.
       await page.evaluate(({ register, tt }) => {
@@ -113,6 +115,9 @@ test.describe('T8 poisoned frame', () => {
     fry.state.capacity = { ...(fry.state.capacity as object), effective: 99 };
     fry.state.in_progress_count = 7;
     await page.goto(`${baseURL}/`);
+    // Wait for the real initial frame to settle before injecting the poisoned
+    // frame (avoids racing the application's startup request).
+    await page.waitForSelector('#floorplan[data-t]', { timeout: 30000 });
     await page.evaluate((f) => (window as any).__renderFrameForTest(f), frame);
     await page.waitForSelector('#floorplan');
     const sel = `[data-entity="st_fry"][data-kind="station"] [data-state]`;
