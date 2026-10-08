@@ -1,2 +1,8 @@
 node_modules/
 dist/
+# Generated artifacts (not source)
+src/**/*.js
+src/**/*.js.map
+src/**/*.d.ts
+test-results/
+web/dist/

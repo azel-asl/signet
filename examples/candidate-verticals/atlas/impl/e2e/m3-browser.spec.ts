@@ -162,15 +162,48 @@ test.describe('T6-real: real user path', () => {
     await page.waitForSelector('#floorplan[data-register="baseline"]', { timeout: 30000 });
     await page.click('[data-register-btn="observed"]');
     await page.waitForSelector('#floorplan[data-register="observed"]', { timeout: 30000 });
-    // G. Select an entity using the actual UI (click a station in the SVG).
-    // The click handler is on the <g>; dispatch via JS (the <g> has no box
-    // for Playwright's actionability check, but real users click the rect
-    // inside which bubbles to the <g> handler).
-    await page.locator('[data-entity="st_fry"][data-kind="station"]').first().dispatchEvent('click');
+    // G. Select an entity using the actual UI (genuine Playwright click).
+    // The click handler is on the <g>; we click the <rect> inside (which has
+    // a real bounding box). The click bubbles to the <g> handler. This is a
+    // genuine user click with full actionability checks — it will fail if an
+    // overlay blocks it.
+    await page.locator('[data-entity="st_fry"][data-kind="station"] rect').first().click();
     await page.waitForSelector('[data-testid="inspector-body"]:not(:empty)', { timeout: 30000 });
     // H. Inspect evidence using actual UI: the inspector shows evidence items.
     const inspectorText = await page.textContent('[data-testid="inspector-body"]');
     expect(inspectorText).toContain('Evidence');
+  });
+
+  test('stale inspector response does not overwrite newer selection (real UI)', async ({ page, baseURL }) => {
+    await page.goto(`${baseURL}/`);
+    await page.waitForSelector('#floorplan[data-register="observed"]', { timeout: 30000 });
+    // Delay the /api/inspect response for station A (st_fry).
+    let releaseA: (() => void) | null = null;
+    const aBlocked = new Promise<void>((resolve) => { releaseA = resolve; });
+    await page.route('**/api/inspect*', async (route) => {
+      const url = route.request().url();
+      if (url.includes('st_fry') && !url.includes('st_grill')) {
+        await aBlocked;
+      }
+      await route.continue();
+    });
+    // Click station A (genuine click). Its inspector request will be delayed.
+    await page.locator('[data-entity="st_fry"][data-kind="station"] rect').first().click();
+    // Immediately click station B (st_grill) via genuine click. Its request is not delayed.
+    await page.locator('[data-entity="st_grill"][data-kind="station"] rect').first().click();
+    // B's inspector should load (not delayed).
+    await page.waitForFunction(
+      () => document.getElementById('inspector-head')?.textContent?.includes('st_grill'),
+      { timeout: 30000 },
+    );
+    const headAfterB = await page.textContent('[data-testid="inspector-head"]');
+    expect(headAfterB).toContain('st_grill');
+    // Now release A's delayed response. It must NOT overwrite B.
+    releaseA!();
+    await page.waitForTimeout(1000);
+    const headAfterA = await page.textContent('[data-testid="inspector-head"]');
+    expect(headAfterA).toContain('st_grill');
+    expect(headAfterA).not.toContain('st_fry');
   });
 });
 

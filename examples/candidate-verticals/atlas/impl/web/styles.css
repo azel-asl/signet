@@ -1,0 +1,45 @@
+/* ATLAS Experience renderer styles. Presentation only. */
+:root {
+  --bg: #f5f3ee;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #d8d4c8;
+  --sim-wash: rgba(180, 40, 40, 0.08);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+#app { max-width: 1600px; margin: 0 auto; padding: 12px; }
+
+#register-bar { display: flex; gap: 16px; align-items: center; margin-bottom: 8px; }
+#register-toggle button { padding: 8px 16px; margin-right: 4px; cursor: pointer; }
+#register-toggle button[aria-selected="true"] { font-weight: bold; outline: 2px solid var(--ink); }
+#banner { padding: 8px 12px; border: 1px solid var(--line); background: #fff; flex: 1; }
+
+#timeline { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; padding: 8px; background: #fff; border: 1px solid var(--line); }
+#time-readout { font-variant-numeric: tabular-nums; min-width: 200px; }
+#timeline-track { flex: 1; height: 24px; background: #eee; position: relative; }
+#timeline-notice { color: var(--muted); font-size: 0.9em; }
+
+main { display: flex; gap: 12px; }
+#floorplan-section { flex: 2; }
+#floorplan-wrap { position: relative; background: #fff; border: 1px solid var(--line); }
+#floorplan { width: 100%; height: auto; display: block; }
+#loading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; }
+#loading-overlay[hidden] { display: none; }
+#error-card { padding: 24px; background: #fee; border: 2px solid #c00; margin-top: 12px; }
+
+#side-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+#side-panel > div { background: #fff; border: 1px solid var(--line); padding: 12px; }
+#side-panel h2 { margin: 0 0 8px 0; font-size: 1em; }
+#orders-list { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+#orders-list li { padding: 4px 0; border-bottom: 1px solid var(--line); }
+
+/* Simulated watermark: repeated diagonal text across the whole canvas. */
+.sim-watermark { font-size: 28px; fill: rgba(180, 40, 40, 0.18); font-weight: bold; pointer-events: none; }
+/* SVG text labels should not intercept clicks meant for their parent shapes. */
+#floorplan text { pointer-events: none; }
+
+/* Station fills: solid for observed, hatched for simulated (not colour alone). */
+.station-solid { fill: #e8f4e8; stroke: #333; }
+.station-hatched { fill: url(#hatch); stroke: #333; stroke-dasharray: 4 2; }
