@@ -55,3 +55,10 @@ counted. Observed day 1 has no event at 18:20:00 and Fry was already OVERLOADED 
 of every instant in `(tB, tH]`. Verified that per-event and end-of-instant sampling give identical
 values on all three fixture logs, so end-of-instant is adopted as the cleaner definition with no
 other value moving. One expected value changed (calibration only). No schema change.
+
+## CCR-005 — M4 claim ids, link-wide E3, branch interval, item work (raised by the M4 review)
+
+**Decision: ACCEPT.** See `CCR-005.md`. Unknown ids become `c:unknown_<reason>:<subject>` and subjects may contain
+`-`; E3 bounds every link, not only `supports`; `diagnoseAtTime` takes `branch_interval` so the facade can enforce
+`[tB, tH]` and compute `onset_in_parent`; item work is defined through the order process; the `onset_in_parent`
+boundary at `tB` is fixed; §I evidence is complete. Schema tightened, version unchanged. Answer key unchanged.

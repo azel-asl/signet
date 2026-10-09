@@ -47,7 +47,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["id", "kind", "role", "subject", "template", "values", "basis", "rule", "claim_class", "support", "confidence", "assumptions", "evidence", "links"],
       "properties": {
-        "id": { "type": "string", "pattern": "^c:[a-z_]+:[a-z0-9_]+$" },
+        "id": { "type": "string", "pattern": "^c:[a-z_]+:[a-z0-9_-]+$" },
         "kind": { "enum": ["overload", "backlog", "backlog_growth", "at_capacity", "capacity_limit", "demand_vs_capacity", "equipment_degradation", "assembly_blocking", "unknown"] },
         "role": { "enum": ["symptom", "condition", "limitation", "non_limitation", "downstream_effect", "unknown"] },
         "subject": { "type": "string" },
@@ -67,7 +67,7 @@
       },
       "allOf": [
         { "if": { "properties": { "basis": { "const": "inference" } } }, "then": { "required": ["confidence"], "properties": { "claim_class": { "const": "inferred" }, "support": { "const": "bounded" }, "confidence": { "type": "object" } } }, "else": { "properties": { "claim_class": { "enum": ["derived", "simulated"] }, "confidence": { "type": "null" } } } },
-        { "if": { "properties": { "kind": { "const": "unknown" } } }, "then": { "required": ["reason"], "properties": { "role": { "const": "unknown" }, "support": { "const": "none" } } }, "else": { "properties": { "evidence": { "type": "array", "minItems": 1 } } } }
+        { "if": { "properties": { "kind": { "const": "unknown" } } }, "then": { "required": ["reason"], "properties": { "id": { "type": "string", "pattern": "^c:unknown_(model_unexplained_idle|rule_not_applicable|missing_relationship|insufficient_window|conflicting_facts):[a-z0-9_-]+$" }, "role": { "const": "unknown" }, "support": { "const": "none" } } }, "else": { "properties": { "id": { "type": "string", "pattern": "^c:(overload|backlog|backlog_growth|demand_vs_capacity|at_capacity|capacity_limit|equipment_degradation|assembly_blocking):[a-z0-9_-]+$" }, "evidence": { "type": "array", "minItems": 1 } } } }
       ]
     }
   }

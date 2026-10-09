@@ -1,6 +1,6 @@
 # 18 — ATLAS V0 Milestone 4 contract: DIAGNOSE, and Muse handoff
 
-**Status:** FROZEN as the Muse Milestone 4 contract on 2026-10-08.
+**Status:** FROZEN as the Muse Milestone 4 contract on 2026-10-08; amended by CCR-005 (2026-10-08).
 **Spec owner:** Opus. Fable on escalation only.
 **Reference:** this file's commit on `claude/youthful-ride-3hx3o1` (parent `40ab1fc`).
 **Implementation base:** `muse/atlas-v0` @ `5758738` (M1, M2, M3 PASS).
@@ -70,7 +70,7 @@ interface Diagnosis {
   diagnosis_hash: string;                // canonHash(minus diagnosis_hash), computed last
 }
 interface Claim {
-  id: string;                            // 'c:<kind>:<subject>', unique in a diagnosis
+  id: string;                            // 'c:<kind>:<subject>'; unknowns 'c:unknown_<reason>:<subject>' (CCR-005 C1); unique
   kind: ClaimKind; role: Role; subject: Id;
   template: string;                      // formatter template id, §L
   values: Record<string, number|string|boolean|string[]|null>;   // every number the template may print
@@ -111,7 +111,7 @@ relationship in the world.
 | `at_capacity` | condition | `effective > 0 ∧ in_progress ≥ effective` | in_progress, effective | R01, R03 |
 | `capacity_limit` | limitation | `at_capacity`, or `effective = 0 ∧ queue_len > 0` | class, equipment, staff, effective, add_one_staff, add_one_equipment_slot | R01 |
 | `equipment_degradation` | limitation or non_limitation | attached equipment not OPERATIONAL | equipment_id, status, capacity, nominal_capacity, restoring_raises_effective | R01 |
-| `assembly_blocking` | downstream_effect | `backlog` ∧ at least one OPEN order whose only remaining item work is at `s` | count_sole, sole_remaining_blocker_for (ids), orders_with_pending_work (ids) | R05 |
+| `assembly_blocking` | downstream_effect | `backlog` ∧ at least one OPEN order whose only remaining item work is at `s` (item work: CCR-005 C4) | count_sole, sole_remaining_blocker_for (ids), orders_with_pending_work (ids) | R05 |
 | `unknown` | unknown | §J | reason, detail | — |
 
 `demand_work_s` = Σ nominal `duration_s` (world processes) of `WORK_QUEUED` events at `s` with
@@ -147,7 +147,8 @@ says is never observed. Event evidence keeps its own provenance class when resol
 Enforced by the core validator; any violation throws `DiagnosisError('EPISTEMIC_VIOLATION')`:
 - **E1** `claim_class` of a non-inference claim equals `context.claim_class`.
 - **E2** `basis = inference` ⇒ `claim_class = inferred`, `support = bounded`, `confidence` present. No V0 pack emits it; the core accepts it for future packs.
-- **E3** A claim that a `bounded` or `none` claim supports cannot be `deterministic`.
+- **E3** (CCR-005 C2) For every link, `rank(dependent.support) ≤ rank(dependency.support)`, `deterministic 2 > bounded 1 > none 0`.
+  Dependent/dependency: `supports` A→B: B depends on A; `limited_by` A→B: A depends on B; `blocks` A→B: B depends on A.
 - **E4** `deterministic` requires at least one evidence ref and every ref to resolve (§I).
 - **E5** Only the three link types exist. No claim, template or value expresses cause (§E).
 - **E6** A claim's `values` contain every number its template prints (names and id lists excepted); the formatter post-check (§L) enforces it.
@@ -194,13 +195,14 @@ must use `has_equipment` from world relationships, not that number.
 
 - A diagnosis exists only for one `(branch, t)` and copies `snapshot_state_hash`. It has no validity
   beyond that instant. Ranges: observed `[time.origin, time.end]`, simulated `[tB, tH]`; else `T_OUT_OF_RANGE`.
+  Simulated diagnosis requires `branch_interval` (CCR-005 C3); pre-branch history is never relabelled simulated.
 - **Onset** (`overload`, `capacity_limit`): scan sample points over the branch log up to `t`, using the
   settled state at the end of each instant with events (the CCR-004 rule), and take the last instant
   the condition (overload status, or the limitation class) became true without an exit since. For
   `overload` this must equal M1 `snapshot.diagnosis.since_t` for the bottleneck station.
 - **Persistence** is `t − onset_t`, shown only as values. **Resolution** is never predicted; it is
   observed by diagnosing a later `t`.
-- On a simulated branch, onset may fall in the parent prefix; then `onset_in_parent = true`.
+- On a simulated branch, onset may fall in the parent prefix; then `onset_in_parent = true` (boundary rule: CCR-005 C5).
 - Branch classification comes from `getStateAtTime` (C1 of M2); the diagnosis copies `mode` and
   `claim_class`. The same pack runs on all branches.
 
@@ -233,7 +235,7 @@ Evidence a pack must attach (minimum):
 |---|---|
 | overload | state pointers to status, queue_len, oldest_wait_s; world pointers to the station's overload attrs; R07 |
 | backlog, backlog_growth | state pointer to queue_len; for growth, the `WORK_QUEUED` and `WORK_STARTED` events at the station in the window |
-| demand_vs_capacity | the window's `WORK_QUEUED` events at the station; world pointers to step durations; R01 |
+| demand_vs_capacity | the window's `WORK_QUEUED` events at the station (all, CCR-005 C6); world pointers to step durations; R01 |
 | at_capacity, capacity_limit | state pointers to capacity and in_progress; the `ASSIGNMENT_CHANGED` events of staff currently assigned; `attached_to` relationships; R01 |
 | equipment_degradation | the equipment's last `EQUIPMENT_STATE_CHANGED` event; state pointer; R01 |
 | assembly_blocking | state pointers to the blocked orders' open work; the order process barrier in the world; R05 |
@@ -258,7 +260,8 @@ the three M3 headings.
 ## K. Capability facade (additive)
 
 ```ts
-diagnoseAtTime(input: { world: World; ledger: AtlasEvent[]; t: number; branch?: string }): Diagnosis
+diagnoseAtTime(input: { world: World; ledger: AtlasEvent[]; t: number; branch?: string;
+                         branch_interval?: { tB: number; tH: number } }): Diagnosis   // required on simulated ledgers (CCR-005 C3)
 explainDiagnosis(input: { diagnosis: Diagnosis; claim_id?: string }): { lines: { claim_id: string; text: string; claim_class: string }[] }
 resolveDiagnosticEvidence(input: { world: World; ledger: AtlasEvent[]; diagnosis: Diagnosis; claim_id: string }): ResolvedRef[]
 ```
@@ -333,7 +336,8 @@ semantics, not JSON shape: per canonical (branch, t) and station, `overloaded`, 
 | A8 | Two overloaded stations → two overload claims, no ranking field |
 | A9 | Poisoned snapshot (OVERLOADED, queue 0, wait under threshold) → `CONFLICTING_FACTS`, no symptom |
 | A10 | Simulated diagnosis requested with `branch: 'history:day1'` on a sim log → `GETSTATE_BRANCH_MISMATCH`; no claim ever carries `derived` on a sim branch |
-| A11 | `t` outside range → `T_OUT_OF_RANGE` |
+| A11 | `t` outside range → `T_OUT_OF_RANGE`, including simulated `t < tB` or `t > tH` at facade and service (CCR-005 C3) |
+| CCR-005 | T-UNKNOWN-IDS, T-E3-LINKS, T-INTERVAL, T-ITEMWORK, T-ONSET-PARENT as listed in `contract-changes/CCR-005.md` §6 |
 | A12 | Browser: inspecting Fry at observed 18:20 shows the T_OVERLOAD and T_CAPACITY_LIMIT lines verbatim from `/api/diagnosis`; the scenario register prefixes `SIMULATED · ` |
 
 ## O. Regression requirements
@@ -369,12 +373,13 @@ existing facade signature, schema or fixture.
 
 ## R. Contract change requests
 
-None needed. M4 adds documents and a pack. It changes no frozen artifact, schema, or engine semantics.
+CCR-005 (accepted 2026-10-08): unknown claim ids, link-wide E3, `branch_interval`, item-work definition,
+`onset_in_parent` boundary, evidence completeness. See `contract-changes/CCR-005.md`.
 
 ## S. Frozen files
 
 `18-m4-diagnose-contract-and-muse-handoff.md`, `schema/atlas-diagnosis.schema.json`,
-`reference/m4/derive-expectations.mjs`, `reference/m4/diagnosis-expectations.json`.
+`reference/m4/derive-expectations.mjs`, `reference/m4/diagnosis-expectations.json`, `contract-changes/CCR-005.md`.
 The fixtures manifest is unchanged (21 files).
 
 ## T. Reference commit procedure
