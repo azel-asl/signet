@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://signalworks.dev/atlas/schema/atlas-recommendation/0.1",
+  "title": "ATLAS Recommendation Set (atlas-recommendation/0.1)",
+  "description": "Advisory recommendations for one observed (branch, t) and one diagnosis (19). Candidates come from pack capabilities over diagnosis claims, are checked for eligibility, simulated with the M2 simulator, compared with the baseline, priced with explicit assumptions, and ranked by an explicit objective. recommendation != authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["atlas_schema", "set_id", "recommend_version", "authority", "packs", "world", "context", "objective", "config_sha256", "baseline", "candidates", "ranking", "top", "sensitivity", "set_hash"],
+  "properties": {
+    "atlas_schema": { "const": "atlas-recommendation/0.1" },
+    "set_id": { "type": "string", "pattern": "^rs_[0-9a-f]{16}$" },
+    "recommend_version": { "type": "string" },
+    "authority": { "const": "advisory_only" },
+    "packs": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["id", "version", "capabilities"], "properties": { "id": { "type": "string" }, "version": { "type": "string" }, "capabilities": { "type": "array", "items": { "type": "string", "pattern": "^cap:[a-z_]+$" } } } } },
+    "world": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string" } } },
+    "context": {
+      "type": "object", "additionalProperties": false,
+      "required": ["branch", "claim_class", "t", "ts", "horizon_t", "diagnosis_id", "diagnosis_hash", "snapshot_state_hash"],
+      "properties": {
+        "branch": { "type": "string", "pattern": "^history:[a-z0-9_-]+$" },
+        "claim_class": { "const": "derived" },
+        "t": { "type": "integer" }, "ts": { "type": "string" }, "horizon_t": { "type": "integer" },
+        "diagnosis_id": { "type": "string", "pattern": "^dx_[0-9a-f]{16}$" },
+        "diagnosis_hash": { "$ref": "#/$defs/hash" },
+        "snapshot_state_hash": { "$ref": "#/$defs/hash" }
+      }
+    },
+    "objective": {
+      "type": "object", "additionalProperties": false, "required": ["id", "primary_metric", "direction", "tie_breakers", "conditional_on"],
+      "properties": {
+        "id": { "enum": ["operational", "economic"] },
+        "primary_metric": { "enum": ["order_time_in_system_s", "net_economic_effect"] },
+        "direction": { "enum": ["minimize", "maximize"] },
+        "tie_breakers": { "type": "array", "items": { "type": "string" } },
+        "conditional_on": { "const": "new_overload_stations" },
+        "economic_value_key": { "enum": ["low", "base", "high"] }
+      }
+    },
+    "config_sha256": { "$ref": "#/$defs/hash" },
+    "baseline": { "type": "object", "additionalProperties": false, "required": ["run_id", "metrics"], "properties": { "run_id": { "type": "string" }, "metrics": { "$ref": "#/$defs/metrics" } } },
+    "candidates": { "type": "array", "maxItems": 16, "items": { "$ref": "#/$defs/candidate" } },
+    "ranking": { "type": "array", "items": { "type": "string" } },
+    "top": {
+      "type": "object", "additionalProperties": false, "required": ["kind", "candidate_id", "reason", "claim_class", "support"],
+      "properties": {
+        "kind": { "enum": ["candidate", "no_action"] },
+        "candidate_id": { "type": ["string", "null"] },
+        "reason": { "enum": ["RANKED_FIRST", "NO_CANDIDATE_BETTER_THAN_BASELINE", "NO_SUPPORTED_INTERVENTION", "NO_ELIGIBLE_CANDIDATE"] },
+        "claim_class": { "enum": ["simulated", "assumed"] },
+        "support": { "enum": ["deterministic", "bounded"] }
+      }
+    },
+    "sensitivity": {
+      "type": "object", "additionalProperties": false, "required": ["parameter", "values", "economic_top_by_value", "stable"],
+      "properties": {
+        "parameter": { "type": "string" },
+        "values": { "type": "object", "additionalProperties": false, "required": ["low", "base", "high"], "properties": { "low": { "type": "number" }, "base": { "type": "number" }, "high": { "type": "number" } } },
+        "economic_top_by_value": { "type": "object", "additionalProperties": false, "required": ["low", "base", "high"], "properties": { "low": { "type": "string" }, "base": { "type": "string" }, "high": { "type": "string" } } },
+        "stable": { "type": "boolean" }
+      }
+    },
+    "set_hash": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "station_metrics": { "type": "object", "additionalProperties": false, "required": ["queue_burden_s", "overload_s", "max_queue", "overload_last_t"], "properties": { "queue_burden_s": { "type": "integer" }, "overload_s": { "type": "integer" }, "max_queue": { "type": "integer" }, "overload_last_t": { "type": ["integer", "null"] } } },
+    "metrics": {
+      "type": "object", "additionalProperties": false,
+      "required": ["order_time_in_system_s", "orders_completed_in_window", "orders_open_at_horizon", "delay_s_over_target_censored", "stations"],
+      "properties": {
+        "order_time_in_system_s": { "type": "integer" }, "orders_completed_in_window": { "type": "integer" },
+        "orders_open_at_horizon": { "type": "integer" }, "delay_s_over_target_censored": { "type": "integer" },
+        "stations": { "type": "object", "additionalProperties": { "$ref": "#/$defs/station_metrics" } }
+      }
+    },
+    "ref": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind", "event_id"], "properties": { "kind": { "const": "event" }, "event_id": { "type": "string" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "path"], "properties": { "kind": { "const": "state" }, "path": { "type": "string", "pattern": "^/(state|metrics)/" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "path"], "properties": { "kind": { "const": "world" }, "path": { "type": "string", "pattern": "^/" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "claim_id"], "properties": { "kind": { "const": "diagnosis_claim" }, "claim_id": { "type": "string", "pattern": "^c:" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "run_id", "event_id"], "properties": { "kind": { "const": "sim_event" }, "run_id": { "type": "string" }, "event_id": { "type": "string" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "path"], "properties": { "kind": { "const": "config" }, "path": { "type": "string", "pattern": "^/" } } }
+      ]
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "capability", "origin_claim", "resource", "from", "to", "window", "eligibility", "simulation", "metrics", "delta", "trade_offs", "new_overload_stations", "dominated_by", "economics", "status", "rank", "assumptions", "claim_class", "support", "evidence"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^cand:reassign_resource:[a-z0-9_-]+:[a-z0-9_-]+:[a-z0-9_]+$" },
+        "kind": { "const": "reassign_resource" },
+        "capability": { "type": "string", "pattern": "^cap:[a-z_]+$" },
+        "origin_claim": { "type": "string", "pattern": "^c:capacity_limit:" },
+        "resource": { "type": "string" }, "from": { "type": ["string", "null"] }, "to": { "type": "string" },
+        "window": { "type": "object", "additionalProperties": false, "required": ["start_t", "end_t", "label"], "properties": { "start_t": { "type": "integer" }, "end_t": { "type": "integer" }, "label": { "type": "string" } } },
+        "eligibility": {
+          "type": "object", "additionalProperties": false, "required": ["eligible", "reasons", "evidence"],
+          "properties": {
+            "eligible": { "type": "boolean" },
+            "reasons": { "type": "array", "items": { "enum": ["SKILL_MISSING", "NOT_ON_SHIFT", "ALREADY_AT_DESTINATION", "FROM_MISMATCH", "WINDOW_INVALID", "DESTINATION_NOT_STATION", "RESOURCE_DOUBLE_BOOKED", "OUTSIDE_BRANCH_INTERVAL"] } },
+            "evidence": { "type": "array", "items": { "$ref": "#/$defs/ref" } }
+          }
+        },
+        "simulation": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["run_id", "interventions", "sim_events", "trace_content_sha256"], "properties": { "run_id": { "type": "string" }, "interventions": { "type": "array", "minItems": 1, "maxItems": 2 }, "sim_events": { "type": "integer" }, "trace_content_sha256": { "$ref": "#/$defs/hash" } } }] },
+        "metrics": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/metrics" }] },
+        "delta": { "oneOf": [{ "type": "null" }, { "type": "object" }] },
+        "trade_offs": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["station", "metric", "baseline", "scenario"], "properties": { "station": { "type": "string" }, "metric": { "enum": ["queue_burden_s", "overload_s"] }, "baseline": { "type": "integer" }, "scenario": { "type": "integer" } } } },
+        "new_overload_stations": { "type": "array", "items": { "type": "string" } },
+        "dominated_by": { "type": "array", "items": { "type": "string" } },
+        "economics": {
+          "oneOf": [{ "type": "null" }, {
+            "type": "object", "additionalProperties": false, "required": ["inputs", "by_value", "claim_class", "support"],
+            "properties": {
+              "inputs": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["name", "value", "claim_class", "source"], "properties": { "name": { "type": "string" }, "value": { "type": "number" }, "claim_class": { "enum": ["assumed", "configured"] }, "source": { "$ref": "#/$defs/ref" } } } },
+              "by_value": { "type": "object", "additionalProperties": false, "required": ["low", "base", "high"], "properties": { "low": { "$ref": "#/$defs/econ" }, "base": { "$ref": "#/$defs/econ" }, "high": { "$ref": "#/$defs/econ" } } },
+              "claim_class": { "const": "assumed" },
+              "support": { "const": "bounded" }
+            }
+          }]
+        },
+        "status": { "enum": ["recommended", "conditionally_recommended", "not_recommended", "dominated", "infeasible", "insufficient_evidence"] },
+        "rank": { "type": ["integer", "null"], "minimum": 1 },
+        "assumptions": { "type": "array", "items": { "type": "string" } },
+        "claim_class": { "enum": ["derived", "simulated"] },
+        "support": { "enum": ["deterministic", "none"] },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/ref" } }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "infeasible" } } }, "then": { "properties": { "simulation": { "type": "null" }, "metrics": { "type": "null" }, "economics": { "type": "null" }, "rank": { "type": "null" }, "claim_class": { "const": "derived" }, "eligibility": { "type": "object", "properties": { "eligible": { "const": false } } } } } },
+        { "if": { "properties": { "status": { "enum": ["recommended", "conditionally_recommended", "not_recommended", "dominated"] } } }, "then": { "properties": { "simulation": { "type": "object" }, "metrics": { "type": "object" }, "claim_class": { "const": "simulated" }, "support": { "const": "deterministic" }, "eligibility": { "type": "object", "properties": { "eligible": { "const": true } } } } } },
+        { "if": { "properties": { "status": { "enum": ["not_recommended", "dominated", "infeasible", "insufficient_evidence"] } } }, "then": { "properties": { "rank": { "type": "null" } } } }
+      ]
+    },
+    "econ": { "type": "object", "additionalProperties": false, "required": ["baseline_cost", "scenario_cost", "net_effect"], "properties": { "baseline_cost": { "type": "number" }, "scenario_cost": { "type": "number" }, "net_effect": { "type": "number" } } }
+  }
+}
