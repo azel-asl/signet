@@ -20,8 +20,10 @@ import {
   REQUIRES_RULE_KINDS,
   hasRequiredRuleKinds,
   diagnoseStation,
+  classifyLimitation,
 } from './packs/station-flow.js';
 import { findOnset, isOnsetInParent } from './temporal.js';
+import { assertEvidenceResolves } from './resolve.js';
 
 export interface DiagnoseInput {
   world: World;
@@ -139,9 +141,38 @@ export function diagnoseAtTime(input: DiagnoseInput): Diagnosis {
     }
 
     // 4. Compute onset for overload and capacity_limit claims.
-    // Phase 4A: Use the frozen findOnset/end-of-instant methodology independently.
-    // Do NOT copy snapshot.diagnosis.since_t; M1 equality is a regression assertion.
+    // Fix 1: Use the frozen findOnset/end-of-instant methodology INDEPENDENTLY
+    // for each claim kind. Do NOT copy snapshot.diagnosis.since_t; do NOT derive
+    // capacity_limit onset from overload. M1 equality is a regression assertion.
     const branchPointT = branch_interval?.tB ?? null;
+
+    // Helper: get the parent-only ledger (non-simulated events up to tB).
+    // Used for exact parent-only-at-tB semantics (Fix 4).
+    const getParentLedger = (): AtlasEvent[] => {
+      if (branchPointT === null) return [];
+      return ledger.filter((e) =>
+        (e.provenance as { claim_class?: string } | undefined)?.claim_class !== 'simulated' &&
+        e.t <= branchPointT
+      );
+    };
+
+    // Helper: check if a condition holds in the parent-only state at tB.
+    // Fix 4: exact semantics, not tB-1 approximation.
+    const holdsInParentAtTB = (
+      checkFn: (metrics: Record<string, { status: string }>) => boolean,
+    ): boolean => {
+      if (branchPointT === null) return false;
+      try {
+        const parentLedger = getParentLedger();
+        const ps = getStateAtTime({ world, ledger: parentLedger, t: branchPointT }) as {
+          metrics: { stations: Record<string, { status: string }> };
+        };
+        return checkFn(ps.metrics.stations);
+      } catch {
+        return false;
+      }
+    };
+
     for (const claim of claims) {
       if (claim.kind === 'overload') {
         // Find when the station became OVERLOADED/UNSTAFFED.
@@ -158,39 +189,63 @@ export function diagnoseAtTime(input: DiagnoseInput): Diagnosis {
         };
         const onset = findOnset(ledger, t, isOverloadedAt);
         claim.onset_t = onset;
-        // CCR-005 C5: onset_in_parent boundary rule.
-        // For the boundary case (onset_t = tB), check if condition holds in parent at tB.
-        let holdsInParentAtTB = false;
+        // CCR-005 C5 + Fix 4: exact parent-only-at-tB semantics.
+        let holdsAtTB = false;
         if (onset === branchPointT && branchPointT !== null) {
-          try {
-            // Parent-only state: use the historical branch up to tB.
-            // The ledger passed here is for the current branch; for parent check
-            // we need the historical ledger. For now, approximate by checking
-            // if the condition held at tB-1 (just before branch).
-            holdsInParentAtTB = isOverloadedAt(branchPointT - 1);
-          } catch {
-            holdsInParentAtTB = false;
-          }
+          holdsAtTB = holdsInParentAtTB((stations) => {
+            const st = stations[claim.subject]?.status;
+            return st === 'OVERLOADED' || st === 'UNSTAFFED';
+          });
         }
         claim.onset_in_parent = mode === 'SIMULATE'
-          ? isOnsetInParent(onset, branchPointT, holdsInParentAtTB)
+          ? isOnsetInParent(onset, branchPointT, holdsAtTB)
           : undefined;
       } else if (claim.kind === 'capacity_limit') {
-        // Capacity_limit onset: when the limitation class became current.
-        // For V0, derive from the overload onset if co-located (canonical cases),
-        // else use findOnset with class matching.
-        const overloadClaim = claims.find((c) => c.kind === 'overload' && c.subject === claim.subject);
-        if (overloadClaim && overloadClaim.onset_t !== undefined) {
-          claim.onset_t = overloadClaim.onset_t;
-          claim.onset_in_parent = overloadClaim.onset_in_parent;
-        } else {
-          // Standalone capacity_limit: find when this class became active.
-          // Simplified: use null for now; full pack re-run is expensive.
-          claim.onset_t = null;
+        // Fix 1: INDEPENDENT onset for capacity_limit using the limitation
+        // class condition itself. The predicate checks whether the station
+        // would emit a capacity_limit with the SAME class at the sample time.
+        const currentClass = claim.values.class as string;
+        const isLimitedAt = (sampleT: number): boolean => {
+          try {
+            const s = getStateAtTime({ world, ledger, t: sampleT, branch }) as {
+              metrics: { stations: Record<string, Record<string, unknown>> };
+            };
+            const sm = s.metrics.stations[claim.subject] as unknown as Parameters<typeof classifyLimitation>[2];
+            if (!sm) return false;
+            const c = classifyLimitation(world, claim.subject, sm);
+            return c.emitCapacityLimit && c.limitClass === currentClass;
+          } catch {
+            return false;
+          }
+        };
+        const onset = findOnset(ledger, t, isLimitedAt);
+        claim.onset_t = onset;
+        // CCR-005 C5 + Fix 4: exact parent-only-at-tB semantics for capacity_limit.
+        let holdsAtTB = false;
+        if (onset === branchPointT && branchPointT !== null) {
+          holdsAtTB = holdsInParentAtTB((stations) => {
+            const sm = stations[claim.subject] as unknown as Parameters<typeof classifyLimitation>[2];
+            if (!sm) return false;
+            const c = classifyLimitation(world, claim.subject, sm);
+            return c.emitCapacityLimit && c.limitClass === currentClass;
+          });
         }
+        claim.onset_in_parent = mode === 'SIMULATE'
+          ? isOnsetInParent(onset, branchPointT, holdsAtTB)
+          : undefined;
       }
     }
   }
+
+  // Fix 3 (E4 at construction): resolve every evidence reference before
+  // returning. A non-empty evidence array is NOT sufficient; dangling refs
+  // are rejected here, not only in resolveDiagnosticEvidence.
+  assertEvidenceResolves(
+    world,
+    ledger,
+    snap as unknown as Record<string, unknown>,
+    claims,
+  );
 
   // 5. Sort claims and compute roots.
   const worldOrder = (world.entities as { id: string }[]).map((e) => e.id);

@@ -178,6 +178,78 @@ export interface PackContext {
 }
 
 /**
+ * Limitation classification result for independent onset derivation.
+ * Extracted from diagnoseStation so onset can be computed independently
+ * via the frozen findOnset/end-of-instant methodology (Fix 1).
+ */
+export interface LimitationClassification {
+  limitClass: string | null;
+  unknownReason: UnknownReason | null;
+  atCapacity: boolean;
+  backlogged: boolean;
+  /** Whether a capacity_limit claim would be emitted (limitClass && !== 'DEMAND'). */
+  emitCapacityLimit: boolean;
+}
+
+/**
+ * Classify the binding constraint for a station from its metrics.
+ * Pure function of (world, stationId, metrics). Mirrors the logic in
+ * diagnoseStation (§F). Used for independent capacity_limit onset.
+ */
+export function classifyLimitation(
+  world: World,
+  stationId: string,
+  m: StationMetrics,
+): LimitationClassification {
+  const entities = world.entities as { id: string; type: string; attrs: Record<string, unknown> }[];
+  const entById = new Map(entities.map((e) => [e.id, e]));
+  const station = entById.get(stationId);
+  if (!station) {
+    return { limitClass: null, unknownReason: null, atCapacity: false, backlogged: false, emitCapacityLimit: false };
+  }
+  const attrs = station.attrs as unknown as StationAttrs;
+  const attached = attachedEquipment(world, stationId);
+  const hasEquipment = attached.length > 0;
+
+  const staffN = m.staff.length;
+  const eqCap = hasEquipment ? m.capacity.equipment : null;
+  const base = r01(attrs, staffN, eqCap);
+  const atCapacity = base.effective > 0 && m.in_progress >= base.effective;
+  const backlogged = m.queue_len > 0;
+
+  const dStaff = r01(attrs, staffN + 1, eqCap).effective - base.effective;
+  const dEquip = eqCap === null ? null : r01(attrs, staffN, (eqCap ?? 0) + 1).effective - base.effective;
+
+  let limitClass: string | null = null;
+  let unknownReason: UnknownReason | null = null;
+  if (base.effective === 0) {
+    if (backlogged) {
+      limitClass = (staffN === 0 && (eqCap === null || (eqCap ?? 0) > 0)) ? 'STAFF'
+        : (eqCap === 0 && staffN > 0) ? 'EQUIPMENT' : 'CO_BINDING';
+    } else {
+      limitClass = 'DEMAND';
+    }
+  } else if (!atCapacity) {
+    if (backlogged) {
+      unknownReason = 'MODEL_UNEXPLAINED_IDLE';
+    } else {
+      limitClass = 'DEMAND';
+    }
+  } else {
+    limitClass = (dStaff > 0 && !(dEquip !== null && dEquip > 0)) ? 'STAFF'
+      : (dEquip !== null && dEquip > 0 && !(dStaff > 0)) ? 'EQUIPMENT' : 'CO_BINDING';
+  }
+
+  return {
+    limitClass,
+    unknownReason,
+    atCapacity,
+    backlogged,
+    emitCapacityLimit: limitClass !== null && limitClass !== 'DEMAND',
+  };
+}
+
+/**
  * Run the station-flow pack for one station.
  * Returns claims for that station.
  */
@@ -203,7 +275,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
   const attached = attachedEquipment(world, stationId);
   const hasEquipment = attached.length > 0;
 
-  // R01 facts.
+  // R01 facts (also used for at_capacity claim values).
   const staffN = m.staff.length;
   const eqCap = hasEquipment ? m.capacity.equipment : null;
   const base = r01(attrs, staffN, eqCap);
@@ -214,26 +286,10 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
   const dStaff = r01(attrs, staffN + 1, eqCap).effective - base.effective;
   const dEquip = eqCap === null ? null : r01(attrs, staffN, (eqCap ?? 0) + 1).effective - base.effective;
 
-  // Binding constraint class (F §F.1-3).
-  let limitClass: string | null = null;
-  let unknownReason: UnknownReason | null = null;
-  if (base.effective === 0) {
-    if (backlogged) {
-      limitClass = (staffN === 0 && (eqCap === null || (eqCap ?? 0) > 0)) ? 'STAFF'
-        : (eqCap === 0 && staffN > 0) ? 'EQUIPMENT' : 'CO_BINDING';
-    } else {
-      limitClass = 'DEMAND';
-    }
-  } else if (!atCapacity) {
-    if (backlogged) {
-      unknownReason = 'MODEL_UNEXPLAINED_IDLE';
-    } else {
-      limitClass = 'DEMAND';
-    }
-  } else {
-    limitClass = (dStaff > 0 && !(dEquip !== null && dEquip > 0)) ? 'STAFF'
-      : (dEquip !== null && dEquip > 0 && !(dStaff > 0)) ? 'EQUIPMENT' : 'CO_BINDING';
-  }
+  // Binding constraint class (§F.1-3), via the shared classifier.
+  const classification = classifyLimitation(world, stationId, m);
+  const limitClass = classification.limitClass;
+  const unknownReason = classification.unknownReason;
 
   const claimClass = claim_class;
   const ruleRef = (id: string) => ({ id, version: PACK_VERSION, world_rules: [id] });
@@ -285,6 +341,15 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       unk.reason = 'CONFLICTING_FACTS';
       unk.support = 'none';
     } else {
+      // §I: state pointers to status, queue_len, oldest_wait_s; world pointers
+      // to the station's overload attrs; R07.
+      const entIdx = (world.entities as { id: string }[]).findIndex((e) => e.id === stationId);
+      const overloadAttrRefs: Ref[] = entIdx >= 0
+        ? [
+            { kind: 'world', path: `/entities/${entIdx}/attrs/overload_queue` },
+            { kind: 'world', path: `/entities/${entIdx}/attrs/overload_wait_s` },
+          ]
+        : [];
       claims.push(mkClaim('overload', 'symptom', 'T_OVERLOAD',
         {
           subject_name: subjectName,
@@ -298,6 +363,8 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         [
           { kind: 'state', path: `/metrics/stations/${stationId}/status` },
           { kind: 'state', path: `/metrics/stations/${stationId}/queue_len` },
+          { kind: 'state', path: `/metrics/stations/${stationId}/oldest_wait_s` },
+          ...overloadAttrRefs,
           { kind: 'world_rule', rule: 'R07' },
         ],
       ));
@@ -334,7 +401,9 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         'state', [],
         [
           { kind: 'state', path: `/metrics/stations/${stationId}/queue_len` },
-          ...growthEvents.slice(0, 5).map((e): Ref => ({ kind: 'event', event_id: e.event_id })),
+          // §I: for growth, the WORK_QUEUED and WORK_STARTED events at the
+          // station in the window — all of them, not sampled (Fix 2).
+          ...growthEvents.map((e): Ref => ({ kind: 'event', event_id: e.event_id })),
         ],
       ));
     }
@@ -358,6 +427,22 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       // Use toFixed(2) to match the reference implementation's rounding.
       const ratio = capacity > 0 ? Number((demand / capacity).toFixed(2)) : null;
       const exceeds = capacity > 0 && demand > capacity;
+      // §I: world pointers to the step durations used in the demand calculation.
+      const stepDurationRefs: Ref[] = [];
+      const seenSteps = new Set<string>();
+      const processes = (world as { processes: { steps: { id: string }[] }[] }).processes;
+      for (const e of queuedEvents) {
+        const stepId = e.data.step as string;
+        if (seenSteps.has(stepId)) continue;
+        seenSteps.add(stepId);
+        for (let pi = 0; pi < processes.length; pi++) {
+          for (let si = 0; si < processes[pi].steps.length; si++) {
+            if (processes[pi].steps[si].id === stepId) {
+              stepDurationRefs.push({ kind: 'world', path: `/processes/${pi}/steps/${si}/duration_s` });
+            }
+          }
+        }
+      }
       claims.push(mkClaim('demand_vs_capacity', 'condition', 'T_DEMAND_VS_CAPACITY',
         {
           subject_name: subjectName,
@@ -371,6 +456,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         [
           // CCR-005 C6: evidence is COMPLETE, not sampled. All window events.
           ...queuedEvents.map((e): Ref => ({ kind: 'event', event_id: e.event_id })),
+          ...stepDurationRefs,
           { kind: 'world_rule', rule: 'R01' },
         ],
         ['demand uses nominal step durations from world.processes'],
@@ -393,6 +479,27 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
 
   // --- at_capacity (R01, R03) ---
   if (atCapacity) {
+    // §I: state pointers to capacity and in_progress; ASSIGNMENT_CHANGED events
+    // of staff currently assigned; attached_to relationships; R01.
+    const atCapStaffEvents: Ref[] = [];
+    for (const staffId of m.staff) {
+      let last: AtlasEvent | null = null;
+      for (const e of ledger) {
+        if (e.type === 'ASSIGNMENT_CHANGED' &&
+            ((e.data as { employee_id?: string }).employee_id === staffId || e.subject === staffId)) {
+          if (!last || e.t > last.t || (e.t === last.t && e.seq > last.seq)) {
+            last = e;
+          }
+        }
+      }
+      if (last) atCapStaffEvents.push({ kind: 'event', event_id: last.event_id });
+    }
+    const atCapRels: Ref[] = [];
+    (world.relationships as { type: string; to: string }[]).forEach((r, idx) => {
+      if (r.type === 'attached_to' && r.to === stationId) {
+        atCapRels.push({ kind: 'world', path: `/relationships/${idx}` });
+      }
+    });
     claims.push(mkClaim('at_capacity', 'condition', 'T_AT_CAPACITY',
       {
         subject_name: subjectName,
@@ -401,24 +508,49 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       },
       'rule', ['R01', 'R03'],
       [
+        { kind: 'state', path: `/metrics/stations/${stationId}/capacity` },
         { kind: 'state', path: `/metrics/stations/${stationId}/in_progress` },
+        ...atCapStaffEvents,
+        ...atCapRels,
         { kind: 'world_rule', rule: 'R01' },
       ],
     ));
   }
 
   // --- capacity_limit (R01) ---
-  if (limitClass && limitClass !== 'DEMAND') {
+  if (classification.emitCapacityLimit) {
     const classText: Record<string, string> = {
       STAFF: 'staffing',
       EQUIPMENT: 'equipment',
       CO_BINDING: 'staffing and equipment together',
       DEMAND: 'incoming work, not capacity',
     };
+    // §I: the ASSIGNMENT_CHANGED events of staff currently assigned.
+    const staffAssignEvents: Ref[] = [];
+    for (const staffId of m.staff) {
+      let last: AtlasEvent | null = null;
+      for (const e of ledger) {
+        if (e.type === 'ASSIGNMENT_CHANGED' &&
+            ((e.data as { employee_id?: string }).employee_id === staffId || e.subject === staffId)) {
+          if (!last || e.t > last.t || (e.t === last.t && e.seq > last.seq)) {
+            last = e;
+          }
+        }
+      }
+      if (last) staffAssignEvents.push({ kind: 'event', event_id: last.event_id });
+    }
+    // §I: attached_to relationships (world pointers).
+    const attachedRels: Ref[] = [];
+    const rels = (world.relationships as { type: string; from: string; to: string }[]);
+    rels.forEach((r, idx) => {
+      if (r.type === 'attached_to' && r.to === stationId) {
+        attachedRels.push({ kind: 'world', path: `/relationships/${idx}` });
+      }
+    });
     claims.push(mkClaim('capacity_limit', 'limitation', 'T_CAPACITY_LIMIT',
       {
         subject_name: subjectName,
-        class_text: classText[limitClass] ?? limitClass,
+        class_text: classText[limitClass!] ?? limitClass!,
         effective: base.effective,
         equipment: base.equipment,
         staff: base.staff,
@@ -426,12 +558,14 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         add_one_equipment_slot: dEquip,
         add_one_equipment_slot_text: dEquip === null ? 'nothing (no equipment)' : String(dEquip),
         // Store the raw class for testing (not in template).
-        class: limitClass,
+        class: limitClass!,
       },
       'rule', ['R01'],
       [
         { kind: 'state', path: `/metrics/stations/${stationId}/capacity` },
         { kind: 'state', path: `/metrics/stations/${stationId}/in_progress` },
+        ...staffAssignEvents,
+        ...attachedRels,
         { kind: 'world_rule', rule: 'R01' },
       ],
     ));
@@ -463,6 +597,19 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
     }, 0);
     const raises = r01(attrs, staffN, restoredCap).effective > base.effective;
     const role = raises ? 'limitation' : 'non_limitation';
+    // §I: the equipment's last EQUIPMENT_STATE_CHANGED event.
+    let lastEqEvent: AtlasEvent | null = null;
+    for (const e of ledger) {
+      if (e.type === 'EQUIPMENT_STATE_CHANGED' &&
+          ((e.data as { equipment_id?: string }).equipment_id === eqId || e.subject === eqId)) {
+        if (!lastEqEvent || e.t > lastEqEvent.t || (e.t === lastEqEvent.t && e.seq > lastEqEvent.seq)) {
+          lastEqEvent = e;
+        }
+      }
+    }
+    const eqEventRefs: Ref[] = lastEqEvent
+      ? [{ kind: 'event', event_id: lastEqEvent.event_id }]
+      : [];
     claims.push(mkClaim('equipment_degradation', role, 'T_EQUIPMENT_DEGRADATION',
       {
         subject_name: subjectName,
@@ -475,6 +622,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       },
       'rule', ['R01'],
       [
+        ...eqEventRefs,
         { kind: 'state', path: `/state/equipment/${eqId}/status` },
         { kind: 'world_rule', rule: 'R01' },
       ],
@@ -514,6 +662,22 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       }
     }
     if (sole.length > 0) {
+      // §I: state pointers to the blocked orders' open work; the order process
+      // barrier in the world; R05.
+      const workRefs: Ref[] = [];
+      const workOpen = open as { id: string; order_id: string; station_id: string; step: string }[];
+      // Find indices of item-work items for sole-blocked orders at this station.
+      const soleSet = new Set(sole);
+      workOpen.forEach((w, idx) => {
+        if (soleSet.has(w.order_id) && w.station_id === stationId && isItemWork(w)) {
+          workRefs.push({ kind: 'state', path: `/state/work_open/${idx}` });
+        }
+      });
+      // World pointer to the assembly_barrier rule (the order process barrier).
+      const ruleIdx = (world.rules as { id: string }[]).findIndex((r) => r.id === 'R05');
+      const barrierRefs: Ref[] = ruleIdx >= 0
+        ? [{ kind: 'world', path: `/rules/${ruleIdx}` }]
+        : [];
       claims.push(mkClaim('assembly_blocking', 'downstream_effect', 'T_ASSEMBLY_BLOCKING',
         {
           subject_name: subjectName,
@@ -524,6 +688,8 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         },
         'structure', ['R05'],
         [
+          ...workRefs,
+          ...barrierRefs,
           { kind: 'world_rule', rule: 'R05' },
         ],
       ));
