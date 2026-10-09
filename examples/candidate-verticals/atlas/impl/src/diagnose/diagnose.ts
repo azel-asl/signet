@@ -28,6 +28,8 @@ export interface DiagnoseInput {
   ledger: AtlasEvent[];
   t: number;
   branch?: string;
+  /** CCR-005 C3: required on simulated ledgers; {tB, tH} inclusive range. */
+  branch_interval?: { tB: number; tH: number };
 }
 
 /**
@@ -35,7 +37,7 @@ export interface DiagnoseInput {
  * Per 18 §K. Additive; does not change existing capabilities.
  */
 export function diagnoseAtTime(input: DiagnoseInput): Diagnosis {
-  const { world, ledger, t, branch } = input;
+  const { world, ledger, t, branch, branch_interval } = input;
 
   if (!Number.isInteger(t)) {
     throw new DiagnosisError('T_NOT_INTEGER', `t must be an integer: ${t}`);
@@ -72,14 +74,31 @@ export function diagnoseAtTime(input: DiagnoseInput): Diagnosis {
   const mode = snap.mode;
   const branchId = snap.branch;
 
+  // CCR-005 C3: simulated branch interval enforcement.
+  // When the ledger classifies as simulated, branch_interval is required and
+  // t must lie in [tB, tH] inclusive. Pre-branch history is never relabelled
+  // simulated, and nothing past tH is diagnosed.
+  if (mode === 'SIMULATE') {
+    if (!branch_interval) {
+      throw new DiagnosisError('BRANCH_INTERVAL_REQUIRED',
+        'branch_interval {tB, tH} is required for simulated ledgers');
+    }
+    const { tB, tH } = branch_interval;
+    if (t < tB || t > tH) {
+      throw new DiagnosisError('T_OUT_OF_RANGE',
+        `t ${t} outside simulated branch interval [${tB}, ${tH}]`);
+    }
+  }
+
   // 2. Check pack applicability.
   const worldId = (world.metadata as { id: string }).id;
   const claims: Claim[] = [];
 
   if (!hasRequiredRuleKinds(world)) {
     // Pack skipped with RULE_NOT_APPLICABLE.
+    // CCR-005 C1: unknown id is c:unknown_<reason>:<subject>; subject allows hyphens.
     claims.push({
-      id: `c:unknown:${worldId}`,
+      id: `c:unknown_rule_not_applicable:${worldId}`,
       kind: 'unknown',
       role: 'unknown',
       subject: worldId,
@@ -120,18 +139,55 @@ export function diagnoseAtTime(input: DiagnoseInput): Diagnosis {
     }
 
     // 4. Compute onset for overload and capacity_limit claims.
-    // For overload, use M1's since_t (guarantees T-LEGACY agreement).
-    const m1SinceT = snap.diagnosis?.since_t ?? null;
-    const m1Bottleneck = snap.diagnosis?.bottleneck ?? null;
-
+    // Phase 4A: Use the frozen findOnset/end-of-instant methodology independently.
+    // Do NOT copy snapshot.diagnosis.since_t; M1 equality is a regression assertion.
+    const branchPointT = branch_interval?.tB ?? null;
     for (const claim of claims) {
-      if (claim.kind === 'overload' && m1Bottleneck === claim.subject) {
-        claim.onset_t = m1SinceT;
-        // Check if onset is in parent (for simulated branches).
-        // The branch point is tB; we need to get it from the register.
-        // For now, onset_in_parent is false unless we can determine otherwise.
-        // TODO: Get branch point from experience layer.
-        claim.onset_in_parent = false;
+      if (claim.kind === 'overload') {
+        // Find when the station became OVERLOADED/UNSTAFFED.
+        const isOverloadedAt = (sampleT: number): boolean => {
+          try {
+            const s = getStateAtTime({ world, ledger, t: sampleT, branch }) as {
+              metrics: { stations: Record<string, { status: string }> };
+            };
+            const st = s.metrics.stations[claim.subject]?.status;
+            return st === 'OVERLOADED' || st === 'UNSTAFFED';
+          } catch {
+            return false;
+          }
+        };
+        const onset = findOnset(ledger, t, isOverloadedAt);
+        claim.onset_t = onset;
+        // CCR-005 C5: onset_in_parent boundary rule.
+        // For the boundary case (onset_t = tB), check if condition holds in parent at tB.
+        let holdsInParentAtTB = false;
+        if (onset === branchPointT && branchPointT !== null) {
+          try {
+            // Parent-only state: use the historical branch up to tB.
+            // The ledger passed here is for the current branch; for parent check
+            // we need the historical ledger. For now, approximate by checking
+            // if the condition held at tB-1 (just before branch).
+            holdsInParentAtTB = isOverloadedAt(branchPointT - 1);
+          } catch {
+            holdsInParentAtTB = false;
+          }
+        }
+        claim.onset_in_parent = mode === 'SIMULATE'
+          ? isOnsetInParent(onset, branchPointT, holdsInParentAtTB)
+          : undefined;
+      } else if (claim.kind === 'capacity_limit') {
+        // Capacity_limit onset: when the limitation class became current.
+        // For V0, derive from the overload onset if co-located (canonical cases),
+        // else use findOnset with class matching.
+        const overloadClaim = claims.find((c) => c.kind === 'overload' && c.subject === claim.subject);
+        if (overloadClaim && overloadClaim.onset_t !== undefined) {
+          claim.onset_t = overloadClaim.onset_t;
+          claim.onset_in_parent = overloadClaim.onset_in_parent;
+        } else {
+          // Standalone capacity_limit: find when this class became active.
+          // Simplified: use null for now; full pack re-run is expensive.
+          claim.onset_t = null;
+        }
       }
     }
   }

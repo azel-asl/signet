@@ -239,21 +239,32 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
   const ruleRef = (id: string) => ({ id, version: PACK_VERSION, world_rules: [id] });
 
   // Helper to build a claim.
+  // CCR-005 C1: unknown claims use c:unknown_<reason>:<subject> for uniqueness.
   const mkClaim = (
     kind: Claim['kind'], role: Claim['role'], template: string,
     values: Claim['values'], basis: Claim['basis'],
     ruleIds: string[], evidence: Ref[], assumptions: string[] = [],
-  ): Claim => ({
-    id: `c:${kind}:${stationId}`,
-    kind, role, subject: stationId, template, values, basis,
-    rule: { id: `${PACK_ID}/${kind}`, version: PACK_VERSION, world_rules: ruleIds },
-    claim_class: claimClass,
-    support: 'deterministic',
-    confidence: null,
-    assumptions,
-    evidence,
-    links: [],
-  });
+    unknownReason?: UnknownReason,
+  ): Claim => {
+    let id: string;
+    if (kind === 'unknown' && unknownReason) {
+      const reasonSlug = unknownReason.toLowerCase();
+      id = `c:unknown_${reasonSlug}:${stationId}`;
+    } else {
+      id = `c:${kind}:${stationId}`;
+    }
+    return {
+      id,
+      kind, role, subject: stationId, template, values, basis,
+      rule: { id: `${PACK_ID}/${kind}`, version: PACK_VERSION, world_rules: ruleIds },
+      claim_class: claimClass,
+      support: 'deterministic',
+      confidence: null,
+      assumptions,
+      evidence,
+      links: [],
+    };
+  };
 
   // --- overload (R07) ---
   const isOverloaded = m.status === 'OVERLOADED' || m.status === 'UNSTAFFED';
@@ -268,6 +279,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         { subject_name: subjectName, detail: 'overload state', reason: 'CONFLICTING_FACTS' },
         'rule', ['R07'],
         [{ kind: 'state', path: `/metrics/stations/${stationId}/status` }],
+        [], 'CONFLICTING_FACTS',
       ));
       const unk = claims[claims.length - 1];
       unk.reason = 'CONFLICTING_FACTS';
@@ -357,7 +369,8 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         },
         'rule', ['R01'],
         [
-          ...queuedEvents.slice(0, 10).map((e): Ref => ({ kind: 'event', event_id: e.event_id })),
+          // CCR-005 C6: evidence is COMPLETE, not sampled. All window events.
+          ...queuedEvents.map((e): Ref => ({ kind: 'event', event_id: e.event_id })),
           { kind: 'world_rule', rule: 'R01' },
         ],
         ['demand uses nominal step durations from world.processes'],
@@ -370,6 +383,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
         { subject_name: subjectName, detail: 'demand vs capacity', reason: 'INSUFFICIENT_WINDOW' },
         'rule', [],
         [{ kind: 'state', path: `/metrics/stations/${stationId}/queue_len` }],
+        [], 'INSUFFICIENT_WINDOW',
       );
       unk.reason = 'INSUFFICIENT_WINDOW';
       unk.support = 'none';
@@ -428,6 +442,7 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
       { subject_name: subjectName, detail: 'capacity limitation', reason: 'MODEL_UNEXPLAINED_IDLE' },
       'rule', ['R01'],
       [{ kind: 'state', path: `/metrics/stations/${stationId}/queue_len` }],
+      [], 'MODEL_UNEXPLAINED_IDLE',
     );
     unk.reason = 'MODEL_UNEXPLAINED_IDLE';
     unk.support = 'none';
@@ -472,18 +487,26 @@ export function diagnoseStation(ctx: PackContext, stationId: string): Claim[] {
   if (hasBarrier && backlogged) {
     const snapState = snapshot as {
       state: {
-        work_open: { id: string; order_id: string; station_id: string }[];
+        work_open: { id: string; order_id: string; station_id: string; step: string }[];
         orders_open: { id: string; state: string }[];
       };
     };
     const open = snapState.state.work_open ?? [];
     const orders = snapState.state.orders_open ?? [];
+    // CCR-005 C4: item work is open work whose step is NOT a step of the world
+    // process with applies_to='order'. Identify structurally, never by name.
+    const orderStepIds = new Set<string>();
+    for (const proc of (world.processes as { applies_to?: string; steps: { id: string }[] }[])) {
+      if (proc.applies_to === 'order') {
+        for (const step of proc.steps) orderStepIds.add(step.id);
+      }
+    }
+    const isItemWork = (w: { step: string }): boolean => !orderStepIds.has(w.step);
     const pending: string[] = [];
     const sole: string[] = [];
     for (const o of orders) {
       if (o.state !== 'OPEN') continue;
-      // Exclude items with the '_0_' suffix pattern (per reference implementation).
-      const items = open.filter((w) => w.order_id === o.id && !w.id.endsWith('_0_pass'));
+      const items = open.filter((w) => w.order_id === o.id && isItemWork(w));
       if (!items.some((w) => w.station_id === stationId)) continue;
       pending.push(o.id);
       if (items.every((w) => w.station_id === stationId)) {

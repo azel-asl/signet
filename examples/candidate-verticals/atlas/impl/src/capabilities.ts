@@ -334,20 +334,22 @@ import { formatDiagnosis } from './diagnose/format.js';
 import type { Diagnosis, ResolvedRef } from './diagnose/types.js';
 
 /**
- * diagnoseAtTime({world, ledger, t, branch?}) → Diagnosis.
- * Per 18 §K. JSON in and out. Never mutates inputs. Does not rerun simulation.
+ * diagnoseAtTime({world, ledger, t, branch?, branch_interval?}) → Diagnosis.
+ * Per 18 §K (CCR-005 C3). JSON in and out. Never mutates inputs. Does not rerun simulation.
  */
 export function diagnoseAtTime(input: {
   world: World;
   ledger: AtlasEvent[];
   t: number;
   branch?: string;
+  branch_interval?: { tB: number; tH: number };
 }): Diagnosis {
   const diagnosis = diagnoseImpl({
     world: input.world,
     ledger: input.ledger,
     t: input.t,
     branch: input.branch,
+    branch_interval: input.branch_interval,
   });
   // Return as JSON (deep copy) to ensure no internal references leak.
   return JSON.parse(JSON.stringify(diagnosis)) as Diagnosis;
@@ -428,6 +430,14 @@ export function resolveDiagnosticEvidence(input: {
     }
 
     resolved.push({ ref, resolved: value, claim_class: refClaimClass });
+  }
+
+  // Phase 4B: Every evidence reference must actually resolve.
+  // A dangling reference is a defect.
+  for (const r of resolved) {
+    if (r.resolved === null || r.resolved === undefined) {
+      throw new Error(`E4: dangling evidence reference in ${claim_id}: ${JSON.stringify(r.ref)}`);
+    }
   }
 
   return resolved;

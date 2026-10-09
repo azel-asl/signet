@@ -58,18 +58,34 @@ export function validateEpistemic(diagnosis: Diagnosis): void {
     }
   }
 
-  // E3: a claim supported by bounded/none cannot be deterministic.
-  // Build reverse map: for each claim, find its supporters.
+  // E3 (CCR-005 C2): for every link, rank(dependent.support) <= rank(dependency.support).
+  // Dependent/dependency per link direction:
+  //   supports   A→B (A supports B):    dependent=B, dependency=A
+  //   limited_by A→B (A limited by B):   dependent=A, dependency=B
+  //   blocks     A→B (A blocks B):       dependent=B, dependency=A
+  // Ranks: deterministic=2 > bounded=1 > none=0.
+  const rank = (s: string): number =>
+    s === 'deterministic' ? 2 : s === 'bounded' ? 1 : 0;
   for (const claim of diagnosis.claims) {
     for (const link of claim.links) {
+      const other = byId.get(link.to);
+      if (!other) continue; // E5 already rejects dangling links.
+      let dependent: typeof claim;
+      let dependency: typeof claim;
       if (link.rel === 'supports') {
-        const supporter = byId.get(claim.id)!;
-        const supported = byId.get(link.to)!;
-        if ((supporter.support === 'bounded' || supporter.support === 'none') &&
-            supported.support === 'deterministic') {
-          throw new DiagnosisError('EPISTEMIC_VIOLATION',
-            `E3: ${supporter.id} (${supporter.support}) cannot support deterministic ${supported.id}`);
-        }
+        dependent = other;      // B depends on A
+        dependency = claim;     // A is the support
+      } else if (link.rel === 'limited_by') {
+        dependent = claim;      // A depends on B
+        dependency = other;     // B is the limitation
+      } else { // blocks
+        dependent = other;      // B (downstream) depends on A
+        dependency = claim;     // A is the blocker
+      }
+      if (rank(dependent.support) > rank(dependency.support)) {
+        throw new DiagnosisError('EPISTEMIC_VIOLATION',
+          `E3: ${dependent.id} (${dependent.support}) cannot depend on ` +
+          `${dependency.id} (${dependency.support}) via ${link.rel}`);
       }
     }
   }

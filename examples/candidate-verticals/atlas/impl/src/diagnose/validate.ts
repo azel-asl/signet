@@ -19,13 +19,14 @@ export function validateStructure(diagnosis: Diagnosis): void {
     throw new DiagnosisError('SCHEMA_VIOLATION', 'diagnosis_hash must be 64 hex');
   }
   // Claim IDs must be unique.
+  // CCR-005 C1: subject segment allows hyphens; unknowns use c:unknown_<reason>:<subject>.
   const ids = new Set<string>();
   for (const claim of diagnosis.claims) {
     if (ids.has(claim.id)) {
       throw new DiagnosisError('SCHEMA_VIOLATION', `duplicate claim id ${claim.id}`);
     }
     ids.add(claim.id);
-    if (!/^c:[a-z_]+:[a-z0-9_]+$/.test(claim.id)) {
+    if (!/^c:[a-z_]+:[a-z0-9_-]+$/.test(claim.id)) {
       throw new DiagnosisError('SCHEMA_VIOLATION', `bad claim id ${claim.id}`);
     }
   }

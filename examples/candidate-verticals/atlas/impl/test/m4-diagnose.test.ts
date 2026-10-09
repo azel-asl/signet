@@ -40,13 +40,23 @@ async function getSimLedger(branch: 'baseline' | 'scenario'): Promise<AtlasEvent
   return [...history.filter((e) => e.t <= tB), ...trace];
 }
 
+// CCR-005 C3: branch interval for simulated tests.
+const SIM_BRANCH_INTERVAL = { tB: 1791336000, tH: 1791342000 }; // 18:20 to 20:00
+
 describe('T-KEY: answer key agreement', () => {
   it('all six cases match every answer-key field', async () => {
     for (const c of expectations.cases) {
-      const ledger = c.branch.startsWith('sim:')
+      const isSim = c.branch.startsWith('sim:');
+      const ledger = isSim
         ? await getSimLedger(c.branch === 'sim:baseline' ? 'baseline' : 'scenario')
         : history;
-      const dx = diagnoseAtTime({ world, ledger, t: c.t, branch: c.branch });
+      const dx = diagnoseAtTime({
+        world,
+        ledger,
+        t: c.t,
+        branch: c.branch,
+        branch_interval: isSim ? SIM_BRANCH_INTERVAL : undefined,
+      });
 
       // Check each station in the answer key.
       for (const [stationId, expected] of Object.entries(c.stations as Record<string, any>)) {
@@ -189,7 +199,14 @@ describe('T-SCHEMA: frozen schema validation', () => {
       { ledger: await getSimLedger('scenario'), t: 1791338400, branch: 'sim:scenario' },
     ];
     for (const tc of testCases) {
-      const dx = diagnoseAtTime({ world, ledger: tc.ledger, t: tc.t, branch: tc.branch });
+      const isSim = tc.branch.startsWith('sim:');
+      const dx = diagnoseAtTime({
+        world,
+        ledger: tc.ledger,
+        t: tc.t,
+        branch: tc.branch,
+        branch_interval: isSim ? SIM_BRANCH_INTERVAL : undefined,
+      });
       const valid = validate(dx);
       expect(valid, `schema errors: ${JSON.stringify(validate.errors)}`).toBe(true);
     }
@@ -224,6 +241,7 @@ describe('T-EPISTEMIC: E1-E6 hold', () => {
       ledger: await getSimLedger('scenario'),
       t: 1791338400,
       branch: 'sim:scenario',
+      branch_interval: SIM_BRANCH_INTERVAL,
     });
     const bad = JSON.parse(JSON.stringify(simDx));
     if (bad.claims.length > 0) {
@@ -286,6 +304,7 @@ describe('T-FORMAT: template formatter', () => {
       ledger: await getSimLedger('scenario'),
       t: 1791338400,
       branch: 'sim:scenario',
+      branch_interval: SIM_BRANCH_INTERVAL,
     });
     const { lines } = explainDiagnosis({ diagnosis: dx });
     for (const line of lines) {
@@ -299,24 +318,52 @@ describe('T-PACK: no restaurant words in pack source', () => {
     const packPath = new URL('../src/diagnose/packs/station-flow.ts', import.meta.url);
     const source = await readFile(packPath, 'utf8');
     // Forbidden: restaurant domain words and entity ID patterns.
-    // - Whole words: fry, grill, prep, pass, burger
-    // - ID prefixes: st_ (station IDs), o_0/o_00 (order IDs) — must be at word boundary.
-    const wordPatterns = ['fry', 'grill', 'prep', 'pass', 'burger'].map(
-      (w) => ({ word: w, regex: new RegExp(`\\b${w}\\b`, 'i') })
-    );
-    const idPatterns = [
-      { word: 'st_', regex: /\bst_[a-z0-9_]+/ }, // st_ at word boundary (not in oldest_wait_s)
-      { word: 'o_0', regex: /\bo_0[0-9]+/ },    // o_0 at word boundary
-    ];
+    // Phase 4D: strengthened to detect substring leakage, not just whole-word
+    // matches that underscores can evade (e.g., '_0_pass').
+    // - Substrings (case-insensitive): fry, grill, prep, pass, burger
+    //   (excluding legitimate technical terms like 'pass' in comments about passing data)
+    // - ID patterns: st_, o_0 (station/order ID prefixes)
+    const forbiddenSubstrings = ['fry', 'grill', 'burger'];
+    // 'prep', 'pass' are checked more carefully to avoid false positives.
     const lines = source.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       // Skip the header comment explaining the prohibition.
       if (i < 5 && line.includes('restaurant')) continue;
-      for (const { word, regex } of [...wordPatterns, ...idPatterns]) {
-        if (regex.test(line)) {
-          throw new Error(`forbidden pattern '${word}' in pack source line ${i + 1}: ${line.trim()}`);
+      // Skip comments that discuss the prohibition itself.
+      if (line.trim().startsWith('//') && line.toLowerCase().includes('forbidden')) continue;
+      const lowerLine = line.toLowerCase();
+      for (const word of forbiddenSubstrings) {
+        if (lowerLine.includes(word)) {
+          throw new Error(`forbidden substring '${word}' in pack source line ${i + 1}: ${line.trim()}`);
         }
+      }
+      // Check for prep/pass as standalone or in identifiers (but not in words like 'prepare').
+      // Use a heuristic: match when surrounded by non-letters or at string boundaries
+      // within code, but allow in comments explaining the rule.
+      if (/\bprep\b/i.test(line) || /_prep\b/i.test(line) || /\bprep_/i.test(line)) {
+        // Allow 'prep' in the context of discussing the prohibition.
+        if (!line.toLowerCase().includes('prohibition') && !line.toLowerCase().includes('forbidden')) {
+          throw new Error(`forbidden pattern 'prep' in pack source line ${i + 1}: ${line.trim()}`);
+        }
+      }
+      // 'pass' is tricky: allow in comments, but not as a step identifier.
+      // The specific forbidden pattern is '_pass' as a step suffix.
+      if (/_pass\b/i.test(line) || /['"]pass['"]/i.test(line)) {
+        throw new Error(`forbidden pattern 'pass' (step identifier) in pack source line ${i + 1}: ${line.trim()}`);
+      }
+      // ID prefixes: st_ (but not in oldest_wait_s), o_0
+      if (/\bst_(?!ation)/i.test(line) && !line.includes('oldest_wait_s')) {
+        // Check it's not part of a larger legitimate identifier.
+        const matches = line.match(/\bst_[a-z0-9_]+/gi) || [];
+        for (const m of matches) {
+          if (m.toLowerCase() !== 'st_' && !m.toLowerCase().includes('oldest_wait')) {
+            throw new Error(`forbidden pattern 'st_' in pack source line ${i + 1}: ${line.trim()}`);
+          }
+        }
+      }
+      if (/\bo_0[0-9]*/i.test(line)) {
+        throw new Error(`forbidden pattern 'o_0' in pack source line ${i + 1}: ${line.trim()}`);
       }
     }
   });

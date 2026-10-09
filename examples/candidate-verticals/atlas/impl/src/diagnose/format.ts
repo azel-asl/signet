@@ -35,11 +35,13 @@ export function formatClaim(claim: Claim, simulated: boolean): string {
   }
 
   // Substitute values.
+  // Phase 4F: null values render as 'n/a' to avoid malformed prose like "(ratio , ...)".
   let text = template;
   for (const [key, value] of Object.entries(claim.values)) {
     const placeholder = `{${key}}`;
     if (text.includes(placeholder)) {
-      text = text.split(placeholder).join(String(value ?? ''));
+      const rendered = value === null ? 'n/a' : String(value);
+      text = text.split(placeholder).join(rendered);
     }
   }
 
@@ -55,7 +57,8 @@ export function formatClaim(claim: Claim, simulated: boolean): string {
   let checkText = text;
   for (const [key, value] of Object.entries(claim.values)) {
     if (key.endsWith('_name') || key === 'order_list') {
-      checkText = checkText.split(String(value ?? '')).join('');
+      const rendered = value === null ? 'n/a' : String(value);
+      checkText = checkText.split(rendered).join('');
     }
   }
   const numerals = checkText.match(/\d+(\.\d+)?/g) || [];
@@ -75,9 +78,19 @@ export function formatClaim(claim: Claim, simulated: boolean): string {
   }
 
   // Post-check: no forbidden words.
-  const lowerText = text.toLowerCase();
+  // Phase 4F: exclude text substituted from *_name fields and order_list,
+  // so entity names like "Causeway Grill" don't fail on substrings.
+  let wordCheckText = text;
+  for (const [key, value] of Object.entries(claim.values)) {
+    if (key.endsWith('_name') || key === 'order_list') {
+      const rendered = value === null ? 'n/a' : String(value);
+      wordCheckText = wordCheckText.split(rendered).join('');
+    }
+  }
   for (const word of FORBIDDEN) {
-    if (lowerText.includes(word.toLowerCase())) {
+    // Match whole words only, not substrings.
+    const pattern = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (pattern.test(wordCheckText)) {
       throw new DiagnosisError('FORMAT_VIOLATION',
         `forbidden word '${word}' in ${claim.id}`);
     }

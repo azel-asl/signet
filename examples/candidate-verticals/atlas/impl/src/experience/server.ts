@@ -183,7 +183,11 @@ async function handleApi(pathname: string, params: URLSearchParams, res: ServerR
       const { diagnoseAtTime, explainDiagnosis } = await import('../capabilities.js');
       const { world } = await loadSource();
       const { ledger, register: regDef } = getRegister(register as RegisterKind);
-      const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch });
+      // CCR-005 C3: pass the register's branch interval for simulated registers.
+      const branch_interval = (regDef.branch_point_t !== null && regDef.horizon_t !== null)
+        ? { tB: regDef.branch_point_t, tH: regDef.horizon_t }
+        : undefined;
+      const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch, branch_interval });
       const { lines } = explainDiagnosis({ diagnosis });
       // Filter to entity if given (server-side per §M).
       let fDiagnosis = diagnosis;

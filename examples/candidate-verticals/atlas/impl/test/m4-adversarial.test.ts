@@ -15,6 +15,9 @@ beforeAll(async () => {
   history = ndjson.trim().split('\n').map((l) => JSON.parse(l));
 });
 
+// CCR-005 C3: branch interval for simulated tests.
+const SIM_BRANCH_INTERVAL = { tB: 1791336000, tH: 1791342000 };
+
 // Helper: create a mini world with specific stations.
 function miniWorld(stations: any[], rules: any[]): World {
   return {
@@ -92,7 +95,13 @@ describe('A6: demand ratio > 1 with no backlog', () => {
     const trace = (await readFile(new URL(traceFile, base), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
     const tB = 1791336000;
     const simLedger = [...history.filter((e) => e.t <= tB), ...trace];
-    const dx = diagnoseAtTime({ world: baseWorld, ledger: simLedger, t: 1791338400, branch: 'sim:scenario' });
+    const dx = diagnoseAtTime({
+      world: baseWorld,
+      ledger: simLedger,
+      t: 1791338400,
+      branch: 'sim:scenario',
+      branch_interval: SIM_BRANCH_INTERVAL,
+    });
     
     const fryOverload = dx.claims.find((c) => c.kind === 'overload' && c.subject === 'st_fry');
     expect(fryOverload, 'no Fry overload in scenario').toBeUndefined();
@@ -158,7 +167,13 @@ describe('A10: branch mismatch', () => {
     const trace = (await readFile(new URL(traceFile, base), 'utf8')).trim().split('\n').map((l) => JSON.parse(l));
     const tB = 1791336000;
     const simLedger = [...history.filter((e) => e.t <= tB), ...trace];
-    const dx = diagnoseAtTime({ world: baseWorld, ledger: simLedger, t: 1791338400, branch: 'sim:scenario' });
+    const dx = diagnoseAtTime({
+      world: baseWorld,
+      ledger: simLedger,
+      t: 1791338400,
+      branch: 'sim:scenario',
+      branch_interval: SIM_BRANCH_INTERVAL,
+    });
     
     for (const c of dx.claims) {
       expect(c.claim_class, `claim ${c.id} not derived on sim`).not.toBe('derived');

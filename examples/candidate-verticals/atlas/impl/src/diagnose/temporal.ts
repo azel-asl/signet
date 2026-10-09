@@ -50,10 +50,19 @@ export function findOnset(
 
 /**
  * Check if onset falls in the parent prefix (before branch point).
+ * CCR-005 C5: true iff onset_t < tB, or onset_t = tB and the condition already
+ * holds in the parent-only state at tB. Otherwise false.
  * @param onsetT The onset time.
  * @param branchPointT The branch point time (null for observed).
+ * @param holdsInParentAtTB Whether the condition holds in the parent-only state at tB.
  */
-export function isOnsetInParent(onsetT: number | null, branchPointT: number | null): boolean {
+export function isOnsetInParent(
+  onsetT: number | null,
+  branchPointT: number | null,
+  holdsInParentAtTB: boolean = false,
+): boolean {
   if (onsetT === null || branchPointT === null) return false;
-  return onsetT < branchPointT;
+  if (onsetT < branchPointT) return true;
+  if (onsetT === branchPointT && holdsInParentAtTB) return true;
+  return false;
 }
