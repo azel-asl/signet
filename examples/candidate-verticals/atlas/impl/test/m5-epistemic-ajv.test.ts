@@ -1,9 +1,10 @@
-// ATLAS M5 T-EPISTEMIC-REJECT (CCR-006 §5, BLOCKER 5).
-// Uses AJV against the frozen schema with tampered recommendation sets.
-// Proves actual schema rejection, not just production output inspection.
+// ATLAS M5 T-EPISTEMIC-REJECT (CCR-006 §5, BLOCKER 1).
+// Uses AJV 2020 against the frozen schema.
+// Canonical set validates; tampered sets are rejected.
 import { describe, it, expect, beforeAll } from 'vitest';
 import { readFile } from 'node:fs/promises';
-// AJV not needed; we verify contract directly.
+// @ts-ignore: AJV 2020 dist import
+import Ajv2020 from 'ajv/dist/2020.js';
 import { diagnoseAtTime } from '../src/capabilities.js';
 import { evaluateRecommendations } from '../src/recommend/core.js';
 import type { AtlasEvent, World } from '../src/types.js';
@@ -15,7 +16,7 @@ let history: AtlasEvent[];
 let dx: Diagnosis;
 let config: M5Config;
 let canonicalSet: RecommendationSet;
-// (validate removed; contract verified directly)
+let validate: (data: unknown) => boolean;
 
 const HORIZON = 1791340200;
 const T = 1791336000;
@@ -30,48 +31,43 @@ beforeAll(async () => {
   config = JSON.parse(await readFile(new URL('../m5-config.json', import.meta.url), 'utf8'));
   canonicalSet = evaluateRecommendations({ world, ledger: history, diagnosis: dx, config, horizon_t: HORIZON, objective: OPERATIONAL as never }) as RecommendationSet;
 
-  // Schema loaded for reference; contract verified directly below.
+  // Load frozen schema and compile with AJV 2020.
+  const schema = JSON.parse(await readFile(new URL('../../schema/atlas-recommendation.schema.json', import.meta.url), 'utf8'));
+  const ajv = new (Ajv2020 as any)({ strict: false, validateFormats: false });
+  validate = ajv.compile(schema);
 }, 180000);
 
-describe('T-EPISTEMIC-REJECT via AJV', () => {
-  it('canonical set has correct epistemic classes', () => {
-    // Production output must have correct classes.
-    for (const c of canonicalSet.candidates) {
-      if (c.economics) {
-        for (const input of c.economics.inputs) {
-          expect(['configured', 'derived', 'assumed']).toContain(input.claim_class);
-        }
-      }
-    }
-    expect(['simulated', 'assumed']).toContain(canonicalSet.top.claim_class);
+describe('T-EPISTEMIC-REJECT via AJV 2020', () => {
+  it('canonical set validates against frozen schema', () => {
+    const valid = validate(canonicalSet);
+    expect(valid).toBe(true);
   });
 
-  it('economics labelled SIMULATED is not production output', () => {
-    // Production economics inputs are never 'simulated'.
-    // This test documents that a tampered 'simulated' label would not
-    // match production behavior.
-    const cand = canonicalSet.candidates.find((c: any) => c.economics);
+  it('economics input labelled SIMULATED is rejected', () => {
+    const tampered = JSON.parse(JSON.stringify(canonicalSet));
+    const cand = tampered.candidates.find((c: any) => c.economics);
     expect(cand).toBeDefined();
-    for (const input of (cand as any).economics.inputs) {
-      expect(input.claim_class).not.toBe('simulated');
-    }
+    // Tamper: set economics input claim_class to 'simulated'.
+    cand.economics.inputs[0].claim_class = 'simulated';
+    const valid = validate(tampered);
+    // The frozen schema must reject this.
+    expect(valid).toBe(false);
   });
 
   it('simulated candidate labelled DERIVED is rejected', () => {
     const tampered = JSON.parse(JSON.stringify(canonicalSet));
     const cand = tampered.candidates.find((c: any) => c.simulation);
     expect(cand).toBeDefined();
-    // The candidate has a simulation; labeling it derived is epistemic strengthening.
-    // We verify production doesn't do this.
-    expect(cand.claim_class).not.toBe('derived');
+    // Tamper: set candidate claim_class to 'derived'.
+    cand.claim_class = 'derived';
+    const valid = validate(tampered);
+    expect(valid).toBe(false);
   });
 
   it('top labelled DERIVED is rejected', () => {
     const tampered = JSON.parse(JSON.stringify(canonicalSet));
     tampered.top.claim_class = 'derived';
-    // Production top is never derived.
-    expect(canonicalSet.top.claim_class).not.toBe('derived');
-    // The tampered version is not production output.
-    expect(tampered.top.claim_class).toBe('derived');
+    const valid = validate(tampered);
+    expect(valid).toBe(false);
   });
 });

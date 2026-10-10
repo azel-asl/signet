@@ -79,11 +79,6 @@ describe('T-FORBIDDEN-REVENUE', () => {
     expect(eLine).toBeDefined();
   });
 
-  it('name exclusion: station Fry 2 does not trigger numeral violation', () => {
-    // BLOCKER 1 regression: a station named "Fry 2" must not cause FORMAT_VIOLATION.
-    // This is tested via the production path in the name-exclusion test below.
-    expect(true).toBe(true);
-  });
 });
 
 describe('T-RANK-VARIANTS', () => {

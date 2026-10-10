@@ -44,34 +44,20 @@ describe('T-NUMERAL via production formatter', () => {
     expect(texts).toContain('65 minutes');
   });
 
-  it('unsupported injected numeral fails via production', () => {
-    // Tamper: modify a candidate's delta to include an unsupported numeral,
-    // then run through the real explainRecommendations.
+  it('unsupported injected numeral fails via production', async () => {
+    // Tamper a candidate's dominated_by with an ID containing a standalone numeral.
+    // The R_DOMINATED template has empty sources; the numeral is not in substitutedNames.
+    // Production explainCandidate -> pushLine -> checkNumerals must throw FORMAT_VIOLATION.
+    const { explainCandidate } = await import('../src/recommend/format.js');
     const tampered = JSON.parse(JSON.stringify(set)) as RecommendationSet;
-    const cand = tampered.candidates.find((c) => c.delta);
+    const cand = tampered.candidates.find((c) => c.dominated_by.length > 0);
     expect(cand).toBeDefined();
-    // Inject 99999 into the delta (not a real source value).
-    cand!.delta!.order_time_in_system_s = -99999;
-    // The production formatter should now throw because 99999 is not
-    // in the permitted sources for R_DELTA.
-    // Note: the delta text uses the tampered value, so C4 should catch it
-    // if 99999 isn't in [tis, completed, qb]. But tis IS 99999 now (tampered),
-    // so it would pass. We need a different approach: tamper the text directly
-    // is not possible via production. Instead, we verify that production
-    // would catch a numeral not in sources by checking a synthetic case.
-    //
-    // Alternative: use a world with a station named with a numeral to verify
-    // name exclusion works, and verify that a truly unsupported numeral in
-    // the structured data would be caught.
-    //
-    // For this test, we verify the production path is enforced by confirming
-    // that tampering the rank to an unsupported value would be caught.
-    // Actually, the rank IS the source, so any rank value passes.
-    //
-    // The real proof: production calls pushLine which calls checkNumerals.
-    // We verify this by checking that the canonical lines passed (above)
-    // and that a direct production call with tampered data behaves correctly.
-    expect(true).toBe(true);
+    // Inject a dominated_by ID with standalone numeral 99999.
+    cand!.dominated_by = ['cand:test:99999'];
+    cand!.rank = null; // Ensure R_DOMINATED is emitted (not R_RANK).
+    const baselineLast = set.baseline.metrics.stations[cand!.to]?.overload_last_t ?? null;
+    expect(() => explainCandidate(world, cand!, OPERATIONAL as never, baselineLast))
+      .toThrow(/FORMAT_VIOLATION.*99999/);
   });
 
   it('clock time from proper source (production)', () => {
@@ -130,25 +116,5 @@ describe('T-NAME-EXCLUSION (BLOCKER 1)', () => {
     expect(texts).toContain('Fry 2');
   });
 
-  it('stray numeral outside substituted name still fails', () => {
-    // Tamper a candidate's trade-off to include an unsupported numeral
-    // outside any substituted name. Production should throw.
-    const tampered = JSON.parse(JSON.stringify(set)) as RecommendationSet;
-    const cand = tampered.candidates.find((c) => c.trade_offs.length > 0);
-    expect(cand).toBeDefined();
-    // Inject an unsupported baseline value.
-    cand!.trade_offs[0].baseline = 999999;
-    cand!.trade_offs[0].scenario = 888888;
-    // Production should throw because 999999/888888 are now the sources,
-    // so they would pass. We need a numeral NOT in sources.
-    // The trade-off text is "rises from {baseline} to {scenario}".
-    // If we set baseline=999999, then 999999 IS in sources, so it passes.
-    // To make it fail, we'd need to inject text directly, which bypasses production.
-    //
-    // Instead, we verify that production enforces C4 by confirming the
-    // canonical case passes and the name-exclusion case passes.
-    // A true stray-numeral test requires a production path that allows
-    // text injection, which doesn't exist by design.
-    expect(true).toBe(true);
-  });
+
 });
