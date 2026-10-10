@@ -467,7 +467,11 @@ function buildNoActionSet(input: {
   };
   for (const c of set.candidates) {
     const allRefs = [...c.evidence, ...c.eligibility.evidence];
-    // MUTATION: skip economics source validation
+    if (c.economics?.inputs) {
+      for (const inp of c.economics.inputs as { source?: unknown }[]) {
+        if (inp.source) allRefs.push(inp.source as never);
+      }
+    }
     for (const ref of allRefs) {
       const resolved = resolveRef(ctx, ref as never);
       if ((resolved as unknown) === MISSING) {
@@ -489,7 +493,7 @@ function emptyMetrics(): WindowMetrics {
   };
 }
 
-function resolveAllEvidence(input: {
+export function resolveAllEvidence(input: {
   world: World;
   ledger: AtlasEvent[];
   diagnosis: Diagnosis;
@@ -516,8 +520,11 @@ function resolveAllEvidence(input: {
   };
   for (const c of set.candidates) {
     const allRefs = [...c.evidence, ...c.eligibility.evidence];
-    // Include economics input sources.
-    // MUTATION: skip economics source validation
+    if (c.economics?.inputs) {
+      for (const inp of c.economics.inputs as { source?: unknown }[]) {
+        if (inp.source) allRefs.push(inp.source as never);
+      }
+    }
     for (const ref of allRefs) {
       const resolved = resolveRef(ctx, ref as never);
       // MISSING symbol means dangling; null is a valid resolved value

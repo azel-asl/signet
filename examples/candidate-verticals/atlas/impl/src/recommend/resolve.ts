@@ -66,6 +66,9 @@ export function resolveRef(ctx: ResolveContext, ref: EvidenceRef): unknown {
     case 'config': {
       return getPath(ctx.config, ref.path);
     }
+    default: {
+      return MISSING;
+    }
   }
 }
 

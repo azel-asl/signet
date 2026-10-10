@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import {
   diagnoseAtTime, evaluateRecommendationsFacade, resolveRecommendationEvidence,
 } from '../src/capabilities.js';
+import { resolveAllEvidence } from '../src/recommend/core.js';
 import type { AtlasEvent, World } from '../src/types.js';
 import type { Diagnosis } from '../src/diagnose/types.js';
 import type { M5Config, RecommendationSet } from '../src/recommend/types.js';
@@ -175,17 +176,21 @@ describe('T-EVIDENCE-RESOLVE', () => {
   });
 
   it('10b. dangling economics source fails at construction', () => {
-    // Construction-time validation must also catch it.
-    // We test via the facade's construction path by verifying resolveAllEvidence
-    // would throw. Since we can't easily inject at construction, we verify
-    // the facade (which uses the same resolveRef logic) throws.
+    // Genuine production construction validation test.
+    // Calls the actual resolveAllEvidence used at construction time.
     const c = set.candidates.find((x) => (x as any).economics?.inputs?.length) as any;
     expect(c).toBeDefined();
     const bad = tamperCandidateEvidence(set, c.id, (cc) => {
-      cc.economics.inputs[0].source = { kind: 'config', path: '/bad/path' };
+      cc.economics.inputs[0].source = { kind: 'config', path: '/nonexistent_economics_path' };
     });
+    // The production construction validator must throw.
+    // We need simLogs; for this test we pass an empty map since the
+    // dangling ref is a config ref, not a sim_event.
     expect(() =>
-      resolveRecommendationEvidence({ world, ledger: history, diagnosis: dx, config, set: bad, candidate_id: c.id })
+      (resolveAllEvidence as any)({
+        world, ledger: history, diagnosis: dx, config, set: bad,
+        simLogs: new Map(),
+      })
     ).toThrow(/EVIDENCE_UNRESOLVED/);
   });
 
