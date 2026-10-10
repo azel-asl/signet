@@ -7,6 +7,7 @@ import type { EvidenceRef, Candidate, WindowMetrics } from './types.js';
 import { RecommendationError } from './types.js';
 
 const MISSING = Symbol('missing');
+export { MISSING };
 
 function getPath(obj: unknown, path: string): unknown {
   if (!path.startsWith('/')) return MISSING;

@@ -11,7 +11,7 @@ import type {
   EvidenceRef, WindowMetrics,
 } from './types.js';
 import { RecommendationError } from './types.js';
-import { resolveRef } from './resolve.js';
+import { resolveRef, MISSING } from './resolve.js';
 import { generateCandidateSeeds, MAX_CANDIDATES } from './candidates.js';
 import { checkEligibility } from './eligibility.js';
 import { compileInterventions } from './compile.js';
@@ -489,10 +489,17 @@ function resolveAllEvidence(input: {
   };
   for (const c of set.candidates) {
     const allRefs = [...c.evidence, ...c.eligibility.evidence];
+    // Include economics input sources.
+    if (c.economics?.inputs) {
+      for (const inp of c.economics.inputs as { evidence?: unknown[] }[]) {
+        if (inp.evidence) allRefs.push(...(inp.evidence as never[]));
+      }
+    }
     for (const ref of allRefs) {
       const resolved = resolveRef(ctx, ref as never);
-      // null is a valid resolution (e.g., unassigned station); only undefined/MISSING is dangling.
-      if (resolved === undefined) {
+      // MISSING symbol means dangling; null is a valid resolved value
+      // (e.g., unassigned station). Do not confuse the two.
+      if ((resolved as unknown) === MISSING) {
         throw new RecommendationError('EVIDENCE_UNRESOLVED', `dangling ref: ${JSON.stringify(ref)}`);
       }
     }

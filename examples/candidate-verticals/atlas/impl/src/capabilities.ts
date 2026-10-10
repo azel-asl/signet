@@ -16,7 +16,9 @@ import { evaluateRecommendations } from './recommend/core.js';
 import { explainSet, explainCandidate } from './recommend/format.js';
 import { resolveRef as resolveRecRef } from './recommend/resolve.js';
 import type { RecommendationSet } from './recommend/types.js';
-import { resolveRef as resolveRecRef2 } from './recommend/resolve.js';
+import { resolveRef as resolveRecRef2, MISSING } from './recommend/resolve.js';
+import { RecommendationError } from './recommend/types.js';
+import { compileInterventions } from './recommend/compile.js';
 
 function asJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -615,10 +617,6 @@ export function resolveRecommendationEvidence(input: {
   const c = set.candidates.find((x) => x.id === input.candidate_id);
   if (!c) throw new Error(`unknown candidate_id ${input.candidate_id}`);
 
-  // Build resolution context. Sim logs are reconstructed from the set's
-  // simulation metadata (run_id -> events would require retained logs;
-  // for the facade we resolve non-sim refs and report sim refs as resolvable
-  // if the run_id matches the candidate's simulation).
   const t = (input.diagnosis as { context: { t: number } }).context.t;
   const { state: rawState } = reduceTo(input.world, input.ledger, t as Seconds);
   for (const p of input.world.entities.filter((e) => e.type === 'person')) {
@@ -626,9 +624,47 @@ export function resolveRecommendationEvidence(input: {
     if (!(p.id in rawState.on_shift)) rawState.on_shift[p.id] = false;
   }
 
+  // Reconstruct sim logs deterministically by re-running the candidate's simulation.
+  // This ensures sim_event refs are verified against actual simulation output,
+  // not just run_id matching.
   const simLogs = new Map<string, AtlasEvent[]>();
-  // For sim_event refs, we check that the run_id matches the candidate's
-  // simulation run_id; the actual events are not retained by the facade.
+  if (c.simulation?.run_id) {
+    // Reconstruct the seed from candidate fields and re-run.
+    const seed = {
+      id: c.id,
+      capability: c.capability,
+      origin_claim: c.origin_claim,
+      resource: c.resource,
+      from: c.from,
+      to: c.to,
+      window: c.window,
+    };
+    const interventions = compileInterventions({ world: input.world, seed: seed as never });
+    const tB = t; // base_t is diagnosis t
+    // Use the horizon from the set's metadata if available, else default.
+    const horizon_t = (set as { horizon_t?: number }).horizon_t ?? 1791340200;
+    const spec = {
+      id: `m5-${seed.id}`,
+      name: `m5 ${seed.id}`,
+      base_t: tB,
+      horizon_t,
+      interventions: interventions.map((iv) => ({
+        id: iv.id, employee: iv.employee, from: iv.from, to: iv.to, at_t: iv.at_t,
+      })),
+    };
+    try {
+      const run = runScenarioSpec({ world: input.world, ledger: input.ledger, scenario: spec as never });
+      const runId = (run.scenario as { receipt: { run_id: string } }).receipt.run_id;
+      const events = (run.scenario as { events: AtlasEvent[] }).events;
+      // Only populate if run_id matches the candidate's simulation.
+      if (runId === c.simulation.run_id) {
+        simLogs.set(runId, events);
+      }
+    } catch {
+      // Simulation failed; sim_event refs will be MISSING.
+    }
+  }
+
   const ctx = {
     world: input.world,
     ledger: input.ledger,
@@ -640,17 +676,21 @@ export function resolveRecommendationEvidence(input: {
 
   const out: unknown[] = [];
   const allRefs = [...c.evidence, ...c.eligibility.evidence];
-  for (const ref of allRefs) {
-    if ((ref as { kind: string }).kind === 'sim_event') {
-      const r = ref as { kind: 'sim_event'; run_id: string; event_id: string };
-      // Valid if run_id matches the candidate's simulation.
-      const valid = c.simulation?.run_id === r.run_id;
-      out.push({ ref, resolved: valid ? '[sim_event: run_id verified]' : null });
-      if (!valid) throw new Error(`EVIDENCE_UNRESOLVED: sim_event run_id mismatch for ${input.candidate_id}`);
-    } else {
-      const resolved = resolveRecRef2(ctx, ref as never);
-      out.push({ ref, resolved: resolved !== null && resolved !== undefined ? '[resolved]' : null });
+  // Also include economics input sources if present.
+  if (c.economics?.inputs) {
+    for (const inp of c.economics.inputs as { evidence?: unknown[] }[]) {
+      if (inp.evidence) allRefs.push(...(inp.evidence as never[]));
     }
+  }
+  for (const ref of allRefs) {
+    const resolved = resolveRecRef2(ctx, ref as never);
+    // MISSING symbol means dangling; null is a valid resolved value.
+    if ((resolved as unknown) === MISSING) {
+      throw new RecommendationError('EVIDENCE_UNRESOLVED',
+        `dangling evidence ref for ${input.candidate_id}: ${JSON.stringify(ref)}`);
+    }
+    // Return the actual resolved value, not a placeholder string.
+    out.push({ ref, resolved });
   }
   return asJson(out);
 }
