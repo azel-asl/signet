@@ -21,6 +21,8 @@ interface TemplatedLine extends ExplainLine {
   template: string;
   // Structured sources for C4 numeral check.
   numeralSources: number[];
+  // Names substituted into this line (for C2/C4 exclusion).
+  substitutedNames: string[];
 }
 
 type TemplateId =
@@ -66,9 +68,25 @@ function fmtDeltaSeconds(v: number): string {
   return v < 0 ? `down ${a}s` : `up ${a}s`;
 }
 
+// Mask substituted names for validation (CCR-006 C2/C4).
+// Returns text with all occurrences of the names replaced by a mask.
+function maskNames(text: string, names: string[]): string {
+  let masked = text;
+  // Sort by length descending to avoid partial matches.
+  const sorted = [...names].sort((a, b) => b.length - a.length);
+  for (const name of sorted) {
+    if (!name) continue;
+    // Escape regex special chars.
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    masked = masked.replace(new RegExp(escaped, 'g'), '█');
+  }
+  return masked;
+}
+
 // C2: forbidden-word check with narrow R_ECONOMICS exception.
-function checkForbidden(line: ExplainLine, template: TemplateId): void {
-  let text = line.text;
+// Substituted names are masked before scanning.
+function checkForbidden(line: TemplatedLine, template: TemplateId): void {
+  let text = maskNames(line.text, line.substitutedNames);
   if (template === 'R_ECONOMICS') {
     const exempt = '(delay cost only; no revenue is assumed).';
     if (text.endsWith(exempt)) {
@@ -85,10 +103,12 @@ function checkForbidden(line: ExplainLine, template: TemplateId): void {
 
 // C4: numeral post-check. Every numeral token must equal (ignoring sign)
 // a number from the template's permitted structured sources.
-function checkNumerals(line: ExplainLine, template: TemplateId, sources: number[]): void {
+// Substituted names are masked before scanning.
+function checkNumerals(line: TemplatedLine, template: TemplateId, sources: number[]): void {
+  const masked = maskNames(line.text, line.substitutedNames);
   // Match standalone numerals (word boundaries), allowing optional 's' unit suffix.
   // Digits within IDs like emp_04 are not standalone numerals.
-  const tokens = line.text.match(/\b\d+(\.\d+)?s?\b/g) ?? [];
+  const tokens = masked.match(/\b\d+(\.\d+)?s?\b/g) ?? [];
   for (let tok of tokens) {
     // Strip trailing 's' unit.
     if (tok.endsWith('s') && !tok.endsWith('.s')) {
@@ -108,8 +128,9 @@ function pushLine(
   text: string,
   claim_class: string,
   numeralSources: number[],
+  substitutedNames: string[] = [],
 ): void {
-  const line: TemplatedLine = { candidate_id, text, claim_class, template, numeralSources };
+  const line: TemplatedLine = { candidate_id, text, claim_class, template, numeralSources, substitutedNames };
   // C2 and C4 enforced at construction for every line.
   checkForbidden(line, template);
   checkNumerals(line, template, numeralSources);
@@ -135,20 +156,20 @@ export function explainCandidate(
   // R_CANDIDATE — sources: hour/minute of start_t and end_t (world-local).
   pushLine(lines, 'R_CANDIDATE', c.id,
     `${rName}: ${fromName} → ${toName}, ${startHhmm}–${endHhmm}.`,
-    'derived', [startH, startM, endH, endM]);
+    'derived', [startH, startM, endH, endM], [rName, fromName, toName]);
 
   // C1: R_ASSUMPTION — sources: hour/minute of start_t.
   if (c.eligibility.eligible && c.assumptions.includes(FROZEN_ASSUMPTION)) {
     pushLine(lines, 'R_ASSUMPTION', c.id,
       ASSUMPTION_TEMPLATE.replace('{resource_name}', rName).replace('{start_hhmm}', startHhmm),
-      'assumed', [startH, startM]);
+      'assumed', [startH, startM], [rName]);
   }
 
   if (c.status === 'infeasible') {
     // R_INFEASIBLE — sources: none.
     pushLine(lines, 'R_INFEASIBLE', c.id,
       `${rName} cannot be moved to ${toName}: ${c.eligibility.reasons.join(', ')}.`,
-      'derived', []);
+      'derived', [], [rName, toName]);
     return lines;
   }
 
@@ -161,7 +182,7 @@ export function explainCandidate(
     const completed = c.delta.orders_completed_in_window;
     pushLine(lines, 'R_DELTA', c.id,
       `SIMULATED · Versus doing nothing: order time in system ${tisText}, ${completed} more orders completed, ${toName} queue burden ${fmtDeltaSeconds(qb)}.`,
-      'simulated', [tis, completed, qb]);
+      'simulated', [tis, completed, qb], [toName]);
 
     // R_OVERLOAD_END — sources: minutes_earlier.
     const candLast = c.metrics.stations[c.to]?.overload_last_t ?? null;
@@ -170,7 +191,7 @@ export function explainCandidate(
       if (minutesEarlier >= 1) {
         pushLine(lines, 'R_OVERLOAD_END', c.id,
           `SIMULATED · ${toName} overload ends ${minutesEarlier} minutes earlier.`,
-          'simulated', [minutesEarlier]);
+          'simulated', [minutesEarlier], [toName]);
       }
     }
 
@@ -180,12 +201,12 @@ export function explainCandidate(
       if (t.metric === 'overload_s' && c.new_overload_stations.includes(t.station)) {
         pushLine(lines, 'R_NEW_OVERLOAD', c.id,
           `SIMULATED · New overload at ${sName} (${t.scenario}s).`,
-          'simulated', [t.scenario]);
+          'simulated', [t.scenario], [sName]);
       } else {
         const metricText = t.metric === 'queue_burden_s' ? 'queue burden' : 'overload time';
         pushLine(lines, 'R_TRADEOFF', c.id,
           `SIMULATED · Trade-off: ${sName} ${metricText} rises from ${t.baseline} to ${t.scenario}.`,
-          'simulated', [t.baseline, t.scenario]);
+          'simulated', [t.baseline, t.scenario], [sName]);
       }
     }
 
