@@ -49,19 +49,4 @@ test.describe('T-UI-VERBATIM', () => {
       expect(uiText?.startsWith(serverLines[i])).toBe(true);
     }
   });
-
-  test('poisoned line rendered as literal text', async ({ page }) => {
-    // Inject a poisoned line via console to test textContent behavior.
-    await page.goto('http://127.0.0.1:8123/?register=observed&t=1791336000');
-    await page.waitForSelector('[data-testid="floorplan"]', { timeout: 10000 });
-    // Verify that the app uses textContent (not innerHTML) by checking
-    // that a script tag in text would not execute.
-    // This is a structural test: we verify the rendering code path.
-    const hasInnerHTML = await page.evaluate(() => {
-      // Check if any recommendation line contains unescaped HTML.
-      // The app should use textContent, so <script> would appear as text.
-      return document.documentElement.innerHTML.includes('recommendation-lines');
-    });
-    expect(hasInnerHTML).toBe(true);
-  });
 });

@@ -6,6 +6,7 @@ import {
   runScenarioSpec,
 } from '../src/capabilities.js';
 import { RecommendationError } from '../src/recommend/types.js';
+import { evaluateRecommendations } from '../src/recommend/core.js';
 import type { AtlasEvent, World } from '../src/types.js';
 
 let world: World;
@@ -54,10 +55,34 @@ describe('T-API', () => {
       .toThrowError(expect.objectContaining({ code: 'BOUND_EXCEEDED' }));
   });
 
-  it('too many eligible candidates throws BOUND_EXCEEDED (12+1)', () => {
-    // This is enforced in core; the canonical case has 6 eligible (< 12).
-    // We verify the constant exists and the check is in place via a direct call
-    // with a crafted config that yields >12 eligible. Skipped: covered by unit.
-    expect(true).toBe(true);
+  it('too many eligible candidates throws BOUND_EXCEEDED (12+1)', async () => {
+    // Production bound: MAX_SIMULATIONS = 12 (19 §S).
+    // Create a world with >12 eligible persons by cloning.
+    const w2 = JSON.parse(JSON.stringify(world)) as World;
+    const basePersons = w2.entities.filter((e) => e.type === 'person');
+    // Clone persons to exceed 12 eligible. Each person × 2 windows × stations
+    // generates candidates; we need >12 eligible seeds.
+    for (let i = 0; i < 15; i++) {
+      const src = basePersons[i % basePersons.length];
+      const clone = JSON.parse(JSON.stringify(src));
+      clone.id = `emp_clone_${i}`;
+      clone.name = `Clone${i}`;
+      w2.entities.push(clone);
+      // Ensure on_shift and unassigned in initial_state.
+      if (w2.initial_state) {
+        // Persons not in assignments are treated as unassigned.
+      }
+    }
+    const dx2 = diagnoseAtTime({ world: w2, ledger: history, t: T, branch: 'history:day1' }) as any;
+    const config = JSON.parse(await readFile(new URL('../m5-config.json', import.meta.url), 'utf8'));
+    // The production path should throw BOUND_EXCEEDED.
+    expect(() => {
+      // Use the internal evaluateRecommendations via facade.
+      evaluateRecommendations({
+        world: w2, ledger: history, diagnosis: dx2, config,
+        horizon_t: HORIZON,
+        objective: { id: 'operational', primary_metric: 'order_time_in_system_s', direction: 'minimize', tie_breakers: [], conditional_on: 'new_overload_stations' } as never,
+      });
+    }).toThrowError(expect.objectContaining({ code: 'BOUND_EXCEEDED' }));
   });
 });
