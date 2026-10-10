@@ -641,8 +641,12 @@ export function resolveRecommendationEvidence(input: {
     };
     const interventions = compileInterventions({ world: input.world, seed: seed as never });
     const tB = t; // base_t is diagnosis t
-    // Use the horizon from the set's metadata if available, else default.
-    const horizon_t = (set as { horizon_t?: number }).horizon_t ?? 1791340200;
+    // Use the actual set context horizon. No fixture-specific fallback.
+    const horizon_t = (set as { context: { horizon_t: number } }).context.horizon_t;
+    if (typeof horizon_t !== 'number') {
+      throw new RecommendationError('EVIDENCE_UNRESOLVED',
+        `cannot reconstruct simulation: set.context.horizon_t missing for ${input.candidate_id}`);
+    }
     const spec = {
       id: `m5-${seed.id}`,
       name: `m5 ${seed.id}`,
@@ -678,8 +682,8 @@ export function resolveRecommendationEvidence(input: {
   const allRefs = [...c.evidence, ...c.eligibility.evidence];
   // Also include economics input sources if present.
   if (c.economics?.inputs) {
-    for (const inp of c.economics.inputs as { evidence?: unknown[] }[]) {
-      if (inp.evidence) allRefs.push(...(inp.evidence as never[]));
+    for (const inp of c.economics.inputs as { source?: unknown }[]) {
+      if (inp.source) allRefs.push(inp.source as never);
     }
   }
   for (const ref of allRefs) {

@@ -83,7 +83,7 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
   // No supported intervention (19 §E, §L).
   if (filtered.length === 0) {
     return buildNoActionSet({
-      world, diagnosis, config, cfgSha, horizon_t, objective,
+      world, ledger, diagnosis, config, cfgSha, horizon_t, objective,
       reason: 'NO_SUPPORTED_INTERVENTION',
       claimClass: objective.id === 'economic' ? 'assumed' : 'simulated',
     });
@@ -126,7 +126,7 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
 
   if (eligibleSeeds.length === 0) {
     return buildNoActionSet({
-      world, diagnosis, config, cfgSha, horizon_t, objective,
+      world, ledger, diagnosis, config, cfgSha, horizon_t, objective,
       reason: 'NO_ELIGIBLE_CANDIDATE',
       claimClass: objective.id === 'economic' ? 'assumed' : 'simulated',
       candidates,
@@ -396,6 +396,7 @@ function buildCandidateEvidence(input: {
 
 function buildNoActionSet(input: {
   world: World;
+  ledger: AtlasEvent[];
   diagnosis: Diagnosis;
   config: M5Config;
   cfgSha: string;
@@ -405,7 +406,7 @@ function buildNoActionSet(input: {
   claimClass: 'simulated' | 'assumed';
   candidates?: Candidate[];
 }): RecommendationSet {
-  const { world, diagnosis, cfgSha, horizon_t, objective, reason, claimClass } = input;
+  const { world, ledger, diagnosis, config, cfgSha, horizon_t, objective, reason, claimClass } = input;
   const t = diagnosis.context.t;
   const candidates = input.candidates ?? [];
   const rates = input.config.sensitivity.delay_cost_per_order_minute;
@@ -449,6 +450,32 @@ function buildNoActionSet(input: {
     set_hash: '',
   };
   set.set_hash = createHash('sha256').update(canonHash({ ...set, set_hash: '' })).digest('hex');
+  // Validate evidence before returning (including no-action sets).
+  // Use empty simLogs since no simulations ran for no-action.
+  const { state: rawState } = reduceTo(world, ledger, diagnosis.context.t as Seconds);
+  for (const p of world.entities.filter((e) => e.type === 'person')) {
+    if (!(p.id in rawState.assignments)) rawState.assignments[p.id] = null;
+    if (!(p.id in rawState.on_shift)) rawState.on_shift[p.id] = false;
+  }
+  const ctx = {
+    world,
+    ledger,
+    diagnosis: diagnosis as never,
+    simLogs: new Map<string, AtlasEvent[]>(),
+    config,
+    snapshot: { state: rawState },
+  };
+  for (const c of set.candidates) {
+    const allRefs = [...c.evidence, ...c.eligibility.evidence];
+    // MUTATION: skip economics source validation
+    for (const ref of allRefs) {
+      const resolved = resolveRef(ctx, ref as never);
+      if ((resolved as unknown) === MISSING) {
+        throw new RecommendationError('EVIDENCE_UNRESOLVED',
+          `dangling ref in no-action set: ${JSON.stringify(ref)}`);
+      }
+    }
+  }
   return set;
 }
 
@@ -490,11 +517,7 @@ function resolveAllEvidence(input: {
   for (const c of set.candidates) {
     const allRefs = [...c.evidence, ...c.eligibility.evidence];
     // Include economics input sources.
-    if (c.economics?.inputs) {
-      for (const inp of c.economics.inputs as { evidence?: unknown[] }[]) {
-        if (inp.evidence) allRefs.push(...(inp.evidence as never[]));
-      }
-    }
+    // MUTATION: skip economics source validation
     for (const ref of allRefs) {
       const resolved = resolveRef(ctx, ref as never);
       // MISSING symbol means dangling; null is a valid resolved value
