@@ -1,0 +1,825 @@
+{
+  "atlas_schema": "atlas-m5-answer-key/0.1",
+  "generated_by": "reference/m5/derive-expectations.mjs",
+  "oracle": "fixtures/restaurant-v0/oracle/generate.mjs (unmodified copy, exports appended)",
+  "note": "Semantic answer key. Simulation by the frozen fixture oracle; metrics, economics, statuses and ranking by this script per 19.",
+  "context": {
+    "branch": "history:day1",
+    "diagnosis_t": 1791336000,
+    "tB": 1791336000,
+    "tH": 1791340200,
+    "destination": "st_fry",
+    "diagnosis": {
+      "capacity_limit": "STAFF",
+      "subject": "st_fry"
+    }
+  },
+  "parity": {
+    "frozen_baseline_projection_sha256": "e21591995b953b6bd37a1c79816b00163a48f9d73a570e4df3230cd1bd8f574e",
+    "regenerated_baseline_projection_sha256": "e21591995b953b6bd37a1c79816b00163a48f9d73a570e4df3230cd1bd8f574e",
+    "frozen_scenario_projection_sha256": "ea233257efb153a936a8d53c8ce0fff5262cec3b65c68cbaa741a69734dec2fb",
+    "regenerated_emp_04_horizon_projection_sha256": "ea233257efb153a936a8d53c8ce0fff5262cec3b65c68cbaa741a69734dec2fb"
+  },
+  "baseline": {
+    "sim_events": 872,
+    "trace_projection_sha256": "e21591995b953b6bd37a1c79816b00163a48f9d73a570e4df3230cd1bd8f574e",
+    "metrics": {
+      "order_time_in_system_s": 67146,
+      "orders_completed_in_window": 50,
+      "orders_open_at_horizon": 22,
+      "delay_s_over_target_censored": 27330,
+      "stations": {
+        "st_prep": {
+          "queue_burden_s": 310,
+          "overload_s": 0,
+          "max_queue": 3,
+          "overload_last_t": null
+        },
+        "st_grill": {
+          "queue_burden_s": 1156,
+          "overload_s": 0,
+          "max_queue": 4,
+          "overload_last_t": null
+        },
+        "st_fry": {
+          "queue_burden_s": 56649,
+          "overload_s": 4200,
+          "max_queue": 26,
+          "overload_last_t": 1791340192
+        },
+        "st_pass": {
+          "queue_burden_s": 191,
+          "overload_s": 0,
+          "max_queue": 2,
+          "overload_last_t": null
+        }
+      }
+    }
+  },
+  "config": {
+    "atlas_schema": "atlas-m5-config/0.1",
+    "note": "Explicit, frozen inputs for the canonical M5 case. Every value here is a configured assumption, not an observation.",
+    "candidate_windows": [
+      {
+        "label": "30m",
+        "start_offset_s": 0,
+        "end_offset_s": 1800
+      },
+      {
+        "label": "to_horizon",
+        "start_offset_s": 0,
+        "end": "horizon"
+      }
+    ],
+    "economics": {
+      "reassignment_cost_per_move": 0,
+      "claim_class": "assumed"
+    },
+    "sensitivity": {
+      "delay_cost_per_order_minute": {
+        "low": 0.1,
+        "base": 0.35,
+        "high": 1
+      }
+    }
+  },
+  "candidates": [
+    {
+      "id": "cand:reassign_resource:emp_01:st_fry:30m",
+      "resource": "emp_01",
+      "from": "st_prep",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791337800,
+        "label": "30m"
+      },
+      "eligible": false,
+      "ineligible_reasons": [
+        "SKILL_MISSING"
+      ],
+      "status": "infeasible",
+      "simulated": false,
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_01:st_fry:to_horizon",
+      "resource": "emp_01",
+      "from": "st_prep",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791340200,
+        "label": "to_horizon"
+      },
+      "eligible": false,
+      "ineligible_reasons": [
+        "SKILL_MISSING"
+      ],
+      "status": "infeasible",
+      "simulated": false,
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_02:st_fry:30m",
+      "resource": "emp_02",
+      "from": "st_grill",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791337800,
+        "label": "30m"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 908,
+      "trace_projection_sha256": "65264458099ba6858277566da90c80c1aefbc1696c68860a128d897a7e7fe8e9",
+      "metrics": {
+        "order_time_in_system_s": 85908,
+        "orders_completed_in_window": 53,
+        "orders_open_at_horizon": 19,
+        "delay_s_over_target_censored": 46789,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 310,
+            "overload_s": 0,
+            "max_queue": 3,
+            "overload_last_t": null
+          },
+          "st_grill": {
+            "queue_burden_s": 56622,
+            "overload_s": 4092,
+            "max_queue": 24,
+            "overload_last_t": 1791340200
+          },
+          "st_fry": {
+            "queue_burden_s": 16975,
+            "overload_s": 1507,
+            "max_queue": 14,
+            "overload_last_t": 1791340200
+          },
+          "st_pass": {
+            "queue_burden_s": 2219,
+            "overload_s": 0,
+            "max_queue": 4,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": 18762,
+        "orders_completed_in_window": 3,
+        "orders_open_at_horizon": -3,
+        "delay_s_over_target_censored": 19459,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_grill": {
+            "queue_burden_s": 55466,
+            "overload_s": 4092
+          },
+          "st_fry": {
+            "queue_burden_s": -39674,
+            "overload_s": -2693
+          },
+          "st_pass": {
+            "queue_burden_s": 2028,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": -18762,
+      "new_overload_stations": [
+        "st_grill"
+      ],
+      "worsened_stations": [
+        "st_grill",
+        "st_pass"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 77.98,
+          "net_effect": -32.43
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 272.94,
+          "net_effect": -113.52
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 779.82,
+          "net_effect": -324.32
+        }
+      },
+      "dominated_by": [
+        "cand:reassign_resource:emp_04:st_fry:30m",
+        "cand:reassign_resource:emp_04:st_fry:to_horizon",
+        "cand:reassign_resource:emp_06:st_fry:30m",
+        "cand:reassign_resource:emp_06:st_fry:to_horizon"
+      ],
+      "status": "not_recommended",
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_02:st_fry:to_horizon",
+      "resource": "emp_02",
+      "from": "st_grill",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791340200,
+        "label": "to_horizon"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 707,
+      "trace_projection_sha256": "f196e62c6ff900ce1656b627be8323513ab81d44bbab27a797e6d63539f46bf3",
+      "metrics": {
+        "order_time_in_system_s": 114982,
+        "orders_completed_in_window": 24,
+        "orders_open_at_horizon": 48,
+        "delay_s_over_target_censored": 76200,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 310,
+            "overload_s": 0,
+            "max_queue": 3,
+            "overload_last_t": null
+          },
+          "st_grill": {
+            "queue_burden_s": 109422,
+            "overload_s": 4092,
+            "max_queue": 47,
+            "overload_last_t": 1791340200
+          },
+          "st_fry": {
+            "queue_burden_s": 4324,
+            "overload_s": 230,
+            "max_queue": 6,
+            "overload_last_t": 1791336292
+          },
+          "st_pass": {
+            "queue_burden_s": 4,
+            "overload_s": 0,
+            "max_queue": 1,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": 47836,
+        "orders_completed_in_window": -26,
+        "orders_open_at_horizon": 26,
+        "delay_s_over_target_censored": 48870,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_grill": {
+            "queue_burden_s": 108266,
+            "overload_s": 4092
+          },
+          "st_fry": {
+            "queue_burden_s": -52325,
+            "overload_s": -3970
+          },
+          "st_pass": {
+            "queue_burden_s": -187,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": -47836,
+      "new_overload_stations": [
+        "st_grill"
+      ],
+      "worsened_stations": [
+        "st_grill"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 127,
+          "net_effect": -81.45
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 444.5,
+          "net_effect": -285.08
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 1270,
+          "net_effect": -814.5
+        }
+      },
+      "dominated_by": [
+        "cand:reassign_resource:emp_02:st_fry:30m",
+        "cand:reassign_resource:emp_04:st_fry:30m",
+        "cand:reassign_resource:emp_04:st_fry:to_horizon",
+        "cand:reassign_resource:emp_06:st_fry:30m",
+        "cand:reassign_resource:emp_06:st_fry:to_horizon"
+      ],
+      "status": "not_recommended",
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_04:st_fry:30m",
+      "resource": "emp_04",
+      "from": "st_prep",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791337800,
+        "label": "30m"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 930,
+      "trace_projection_sha256": "049407043877d9c86af7dd66940689e9ba3e4b3a2c026c91814692fbc17a4820",
+      "metrics": {
+        "order_time_in_system_s": 44415,
+        "orders_completed_in_window": 56,
+        "orders_open_at_horizon": 16,
+        "delay_s_over_target_censored": 6081,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 3674,
+            "overload_s": 46,
+            "max_queue": 7,
+            "overload_last_t": 1791337507
+          },
+          "st_grill": {
+            "queue_burden_s": 472,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          },
+          "st_fry": {
+            "queue_burden_s": 18956,
+            "overload_s": 1820,
+            "max_queue": 15,
+            "overload_last_t": 1791340192
+          },
+          "st_pass": {
+            "queue_burden_s": 491,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": -22731,
+        "orders_completed_in_window": 6,
+        "orders_open_at_horizon": -6,
+        "delay_s_over_target_censored": -21249,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 3364,
+            "overload_s": 46
+          },
+          "st_grill": {
+            "queue_burden_s": -684,
+            "overload_s": 0
+          },
+          "st_fry": {
+            "queue_burden_s": -37693,
+            "overload_s": -2380
+          },
+          "st_pass": {
+            "queue_burden_s": 300,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": 22731,
+      "new_overload_stations": [
+        "st_prep"
+      ],
+      "worsened_stations": [
+        "st_prep",
+        "st_pass"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 10.13,
+          "net_effect": 35.42
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 35.47,
+          "net_effect": 123.95
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 101.35,
+          "net_effect": 354.15
+        }
+      },
+      "dominated_by": [
+        "cand:reassign_resource:emp_04:st_fry:to_horizon",
+        "cand:reassign_resource:emp_06:st_fry:30m",
+        "cand:reassign_resource:emp_06:st_fry:to_horizon"
+      ],
+      "status": "dominated",
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_04:st_fry:to_horizon",
+      "resource": "emp_04",
+      "from": "st_prep",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791340200,
+        "label": "to_horizon"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 994,
+      "trace_projection_sha256": "ea233257efb153a936a8d53c8ce0fff5262cec3b65c68cbaa741a69734dec2fb",
+      "metrics": {
+        "order_time_in_system_s": 40648,
+        "orders_completed_in_window": 63,
+        "orders_open_at_horizon": 9,
+        "delay_s_over_target_censored": 2621,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 6960,
+            "overload_s": 46,
+            "max_queue": 7,
+            "overload_last_t": 1791337507
+          },
+          "st_grill": {
+            "queue_burden_s": 356,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          },
+          "st_fry": {
+            "queue_burden_s": 3155,
+            "overload_s": 210,
+            "max_queue": 6,
+            "overload_last_t": 1791336207
+          },
+          "st_pass": {
+            "queue_burden_s": 471,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": -26498,
+        "orders_completed_in_window": 13,
+        "orders_open_at_horizon": -13,
+        "delay_s_over_target_censored": -24709,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 6650,
+            "overload_s": 46
+          },
+          "st_grill": {
+            "queue_burden_s": -800,
+            "overload_s": 0
+          },
+          "st_fry": {
+            "queue_burden_s": -53494,
+            "overload_s": -3990
+          },
+          "st_pass": {
+            "queue_burden_s": 280,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": 26498,
+      "new_overload_stations": [
+        "st_prep"
+      ],
+      "worsened_stations": [
+        "st_prep",
+        "st_pass"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 4.37,
+          "net_effect": 41.18
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 15.29,
+          "net_effect": 144.13
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 43.68,
+          "net_effect": 411.82
+        }
+      },
+      "dominated_by": [
+        "cand:reassign_resource:emp_06:st_fry:to_horizon"
+      ],
+      "status": "dominated",
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_05:st_fry:30m",
+      "resource": "emp_05",
+      "from": "st_pass",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791337800,
+        "label": "30m"
+      },
+      "eligible": false,
+      "ineligible_reasons": [
+        "SKILL_MISSING"
+      ],
+      "status": "infeasible",
+      "simulated": false,
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_05:st_fry:to_horizon",
+      "resource": "emp_05",
+      "from": "st_pass",
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791340200,
+        "label": "to_horizon"
+      },
+      "eligible": false,
+      "ineligible_reasons": [
+        "SKILL_MISSING"
+      ],
+      "status": "infeasible",
+      "simulated": false,
+      "assumptions": []
+    },
+    {
+      "id": "cand:reassign_resource:emp_06:st_fry:30m",
+      "resource": "emp_06",
+      "from": null,
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791337800,
+        "label": "30m"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 936,
+      "trace_projection_sha256": "a492d77655b772b4df1fb51f358d1841b82ee0e1d22f21dc37485c59be52b513",
+      "metrics": {
+        "order_time_in_system_s": 41651,
+        "orders_completed_in_window": 58,
+        "orders_open_at_horizon": 14,
+        "delay_s_over_target_censored": 4340,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 310,
+            "overload_s": 0,
+            "max_queue": 3,
+            "overload_last_t": null
+          },
+          "st_grill": {
+            "queue_burden_s": 1156,
+            "overload_s": 0,
+            "max_queue": 4,
+            "overload_last_t": null
+          },
+          "st_fry": {
+            "queue_burden_s": 16975,
+            "overload_s": 1509,
+            "max_queue": 14,
+            "overload_last_t": 1791340192
+          },
+          "st_pass": {
+            "queue_burden_s": 771,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": -25495,
+        "orders_completed_in_window": 8,
+        "orders_open_at_horizon": -8,
+        "delay_s_over_target_censored": -22990,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_grill": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_fry": {
+            "queue_burden_s": -39674,
+            "overload_s": -2691
+          },
+          "st_pass": {
+            "queue_burden_s": 580,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": 25495,
+      "new_overload_stations": [],
+      "worsened_stations": [
+        "st_pass"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 7.23,
+          "net_effect": 38.32
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 25.32,
+          "net_effect": 134.1
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 72.33,
+          "net_effect": 383.17
+        }
+      },
+      "dominated_by": [
+        "cand:reassign_resource:emp_06:st_fry:to_horizon"
+      ],
+      "status": "dominated",
+      "assumptions": [
+        "resource has no modeled assignment at the source; any unmodeled duties are not represented"
+      ]
+    },
+    {
+      "id": "cand:reassign_resource:emp_06:st_fry:to_horizon",
+      "resource": "emp_06",
+      "from": null,
+      "to": "st_fry",
+      "window": {
+        "start": 1791336000,
+        "end": 1791340200,
+        "label": "to_horizon"
+      },
+      "eligible": true,
+      "simulated": true,
+      "sim_events": 998,
+      "trace_projection_sha256": "1c1dcd265f41c5d256313f4a8a3387c64c78a49b315a1aa085786fc10137cd0d",
+      "metrics": {
+        "order_time_in_system_s": 37223,
+        "orders_completed_in_window": 64,
+        "orders_open_at_horizon": 8,
+        "delay_s_over_target_censored": 813,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 310,
+            "overload_s": 0,
+            "max_queue": 3,
+            "overload_last_t": null
+          },
+          "st_grill": {
+            "queue_burden_s": 1156,
+            "overload_s": 0,
+            "max_queue": 4,
+            "overload_last_t": null
+          },
+          "st_fry": {
+            "queue_burden_s": 4324,
+            "overload_s": 230,
+            "max_queue": 6,
+            "overload_last_t": 1791336292
+          },
+          "st_pass": {
+            "queue_burden_s": 1019,
+            "overload_s": 0,
+            "max_queue": 2,
+            "overload_last_t": null
+          }
+        }
+      },
+      "delta": {
+        "order_time_in_system_s": -29923,
+        "orders_completed_in_window": 14,
+        "orders_open_at_horizon": -14,
+        "delay_s_over_target_censored": -26517,
+        "stations": {
+          "st_prep": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_grill": {
+            "queue_burden_s": 0,
+            "overload_s": 0
+          },
+          "st_fry": {
+            "queue_burden_s": -52325,
+            "overload_s": -3970
+          },
+          "st_pass": {
+            "queue_burden_s": 828,
+            "overload_s": 0
+          }
+        }
+      },
+      "improvement_order_s": 29923,
+      "new_overload_stations": [],
+      "worsened_stations": [
+        "st_pass"
+      ],
+      "economics": {
+        "low": {
+          "baseline_cost": 45.55,
+          "scenario_cost": 1.36,
+          "net_effect": 44.19
+        },
+        "base": {
+          "baseline_cost": 159.42,
+          "scenario_cost": 4.74,
+          "net_effect": 154.68
+        },
+        "high": {
+          "baseline_cost": 455.5,
+          "scenario_cost": 13.55,
+          "net_effect": 441.95
+        }
+      },
+      "dominated_by": [],
+      "status": "recommended",
+      "assumptions": [
+        "resource has no modeled assignment at the source; any unmodeled duties are not represented"
+      ],
+      "rank": 1
+    }
+  ],
+  "ranking": [
+    "cand:reassign_resource:emp_06:st_fry:to_horizon"
+  ],
+  "top_recommendation": "cand:reassign_resource:emp_06:st_fry:to_horizon",
+  "sensitivity": {
+    "economic_top_by_rate": {
+      "low": "cand:reassign_resource:emp_06:st_fry:to_horizon",
+      "base": "cand:reassign_resource:emp_06:st_fry:to_horizon",
+      "high": "cand:reassign_resource:emp_06:st_fry:to_horizon"
+    },
+    "economic_top_stable": true
+  },
+  "cases": {
+    "case6_restricted_to_net_worse_candidates": {
+      "candidate_ids": [
+        "cand:reassign_resource:emp_02:st_fry:30m",
+        "cand:reassign_resource:emp_02:st_fry:to_horizon"
+      ],
+      "expected_top": "no_action"
+    },
+    "case5b_costly_moves_economic_objective": {
+      "reassignment_cost_per_move": 80,
+      "by_rate": {
+        "low": {
+          "top": "no_action",
+          "best_net": null
+        },
+        "base": {
+          "top": "no_action",
+          "best_net": null
+        },
+        "high": {
+          "top": "cand:reassign_resource:emp_06:st_fry:to_horizon",
+          "best_net": 281.95
+        }
+      }
+    },
+    "case5_economics_scale_with_rate": {
+      "low": 44.19,
+      "base": 154.68,
+      "high": 441.95
+    },
+    "case_unsupported_diagnosis": {
+      "diagnosis": {
+        "capacity_limit": "EQUIPMENT",
+        "subject": "st_fry",
+        "register": "scenario",
+        "t": 1791338400
+      },
+      "expected_candidates": 0,
+      "expected_top": "no_action",
+      "reason": "NO_SUPPORTED_INTERVENTION"
+    }
+  }
+}
