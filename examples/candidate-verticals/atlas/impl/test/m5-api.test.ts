@@ -56,33 +56,45 @@ describe('T-API', () => {
   });
 
   it('too many eligible candidates throws BOUND_EXCEEDED (12+1)', async () => {
-    // Production bound: MAX_SIMULATIONS = 12 (19 §S).
-    // Create a world with >12 eligible persons by cloning.
+    // Production simulation bound: MAX_SIMULATIONS = 12 (19 §S).
+    // Construction: 5 eligible people × 3 windows = 15 eligible simulations.
+    // - Give 'fry' skill to emp_01 and emp_05 (on-shift, lack fry).
+    // - Add a third 15-minute window to the config.
+    // 15 < 16 (candidate bound OK), 15 > 12 (simulation bound fires).
     const w2 = JSON.parse(JSON.stringify(world)) as World;
-    const basePersons = w2.entities.filter((e) => e.type === 'person');
-    // Clone persons to exceed 12 eligible. Each person × 2 windows × stations
-    // generates candidates; we need >12 eligible seeds.
-    for (let i = 0; i < 15; i++) {
-      const src = basePersons[i % basePersons.length];
-      const clone = JSON.parse(JSON.stringify(src));
-      clone.id = `emp_clone_${i}`;
-      clone.name = `Clone${i}`;
-      w2.entities.push(clone);
-      // Ensure on_shift and unassigned in initial_state.
-      if (w2.initial_state) {
-        // Persons not in assignments are treated as unassigned.
-      }
+    for (const pid of ['emp_01', 'emp_05']) {
+      const p = w2.entities.find((e) => e.id === pid);
+      const attrs = (p as any).attrs as { skills: string[] };
+      if (!attrs.skills.includes('fry')) attrs.skills.push('fry');
     }
-    const dx2 = diagnoseAtTime({ world: w2, ledger: history, t: T, branch: 'history:day1' }) as any;
     const config = JSON.parse(await readFile(new URL('../m5-config.json', import.meta.url), 'utf8'));
-    // The production path should throw BOUND_EXCEEDED.
-    expect(() => {
-      // Use the internal evaluateRecommendations via facade.
+    config.candidate_windows.push({ label: '15m', start_offset_s: 0, end_offset_s: 900 });
+
+    const dx2 = diagnoseAtTime({ world: w2, ledger: history, t: T, branch: 'history:day1' }) as any;
+
+    // Verify candidate count stays <= 16 before the simulation bound.
+    const { generateCandidateSeeds } = await import('../src/recommend/candidates.js');
+    const seeds = generateCandidateSeeds({ world: w2, ledger: history, diagnosis: dx2, config, horizon_t: HORIZON });
+    expect(seeds.length).toBeLessThanOrEqual(16);
+    expect(seeds.length).toBeGreaterThan(12);
+
+    // Production path must hit the simulation guard, not the candidate guard.
+    let thrown: any = null;
+    try {
       evaluateRecommendations({
         world: w2, ledger: history, diagnosis: dx2, config,
         horizon_t: HORIZON,
         objective: { id: 'operational', primary_metric: 'order_time_in_system_s', direction: 'minimize', tie_breakers: [], conditional_on: 'new_overload_stations' } as never,
       });
-    }).toThrowError(expect.objectContaining({ code: 'BOUND_EXCEEDED' }));
+    } catch (e) {
+      thrown = e;
+    }
+    expect(thrown).not.toBeNull();
+    expect(thrown.code).toBe('BOUND_EXCEEDED');
+    // Must be the simulation guard: "eligible candidates 15 exceed the frozen simulation bound of 12".
+    // The 16-candidate guard says "candidate count ... exceeds the frozen bound of 16" — must NOT match.
+    expect(thrown.message).toContain('eligible candidates');
+    expect(thrown.message).toContain('frozen simulation bound of 12');
+    expect(thrown.message).not.toContain('frozen bound of 16');
   });
 });
