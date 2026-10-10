@@ -62,3 +62,13 @@ other value moving. One expected value changed (calibration only). No schema cha
 `-`; E3 bounds every link, not only `supports`; `diagnoseAtTime` takes `branch_interval` so the facade can enforce
 `[tB, tH]` and compute `onset_in_parent`; item work is defined through the order process; the `onset_in_parent`
 boundary at `tB` is fixed; §I evidence is complete. Schema tightened, version unchanged. Answer key unchanged.
+
+## CCR-006 — M5 closure: assumption line, post-checks, objective-aware rank text, station scope (raised by the M5 review)
+
+**Decision: ACCEPT.** See `CCR-006.md`. Adds the fixed `R_ASSUMPTION` template (after `R_CANDIDATE`, `assumed`,
+authority still last); resolves the `revenue` contradiction with one exact `R_ECONOMICS` negation exemption while the
+whole-word guard stays; defines the M5 numeral post-check, `R_OVERLOAD_END` rounding, four `R_RANK` variants and the
+`R_ECONOMICS` rate under `economic`; `station=` scopes the pool before evaluation; fixes the inspector horizon,
+text insertion and error display; records that `insufficient_evidence` has no error field in V0; scopes T-GENERALITY to persons and stations (rule-id renaming stays with CCR-003). The economic-objective
+status defect and the other review findings are implementation repairs under the existing text. Schema, answer key
+(`7598f593…`), generator, config, README, M1–M4 and CCR-003 scope unchanged.

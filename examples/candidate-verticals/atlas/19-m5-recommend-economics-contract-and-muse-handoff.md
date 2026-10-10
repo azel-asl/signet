@@ -1,6 +1,6 @@
 # 19 — ATLAS V0 Milestone 5 contract: RECOMMEND + ECONOMICS, and Muse handoff
 
-**Status:** FROZEN as the Muse Milestone 5 contract on 2026-10-09.
+**Status:** FROZEN as the Muse Milestone 5 contract on 2026-10-09. **Amended by CCR-006** (`contract-changes/CCR-006.md`) on 2026-10-10.
 **Spec owner:** Opus. Fable on escalation only.
 **Reference:** this file's commit on `claude/youthful-ride-3hx3o1` (parent `038549e`).
 **Implementation base:** `muse/atlas-v0` @ `096cbf0` (M1–M4 PASS).
@@ -173,7 +173,7 @@ candidates, `recommended` before `conditionally_recommended`, then by the object
 
 Evaluated in this order:
 1. `infeasible`: eligibility failed (not simulated).
-2. `insufficient_evidence`: simulation or metrics could not be produced (error recorded).
+2. `insufficient_evidence`: simulation or metrics could not be produced (recorded by the status itself; no error field in V0, CCR-006 C7).
 3. `not_recommended`: `improvement ≤ 0` under the objective (no better than baseline).
 4. `dominated`: another simulated candidate is at least as good on all of
    (`order_time_in_system_s` ↓, `orders_completed_in_window` ↑, Σ `overload_s` over its `new_overload_stations` ↓)
@@ -214,18 +214,22 @@ inputs; no step may raise it.
 | Template | Text |
 |---|---|
 | `R_CANDIDATE` | `{resource_name}: {from_name} → {to_name}, {start_hhmm}–{end_hhmm}.` |
+| `R_ASSUMPTION` | `ASSUMED · Observed state: {resource_name} is on shift with no assigned station at {start_hhmm}. Duties outside the modeled stations are not represented in this simulation.` (CCR-006 C1) |
 | `R_INFEASIBLE` | `{resource_name} cannot be moved to {to_name}: {reasons_text}.` |
 | `R_DELTA` | `SIMULATED · Versus doing nothing: order time in system {tis_delta_text}, {completed_delta} more orders completed, {to_name} queue burden {qb_delta_text}.` |
 | `R_OVERLOAD_END` | `SIMULATED · {to_name} overload ends {minutes_earlier} minutes earlier.` |
 | `R_TRADEOFF` | `SIMULATED · Trade-off: {station_name} {metric_text} rises from {baseline} to {scenario}.` |
 | `R_NEW_OVERLOAD` | `SIMULATED · New overload at {station_name} ({overload_s}s).` |
 | `R_ECONOMICS` | `ASSUMED · At {rate_text} per order-minute over target, net effect {net_effect_text} (delay cost only; no revenue is assumed).` |
-| `R_RANK` | `Ranked {rank}: lowest order time in system among non-dominated candidates without new overloads.` (or the conditional variant) |
+| `R_RANK` | `Ranked {rank}: lowest order time in system among non-dominated candidates without new overloads.` Exactly four objective- and status-specific variants: CCR-006 C3 |
 | `R_DOMINATED` | `Dominated by {dominator_names}.` |
 | `R_NO_ACTION` | `No evaluated intervention is better than doing nothing ({reason_text}).` |
 | `R_AUTHORITY` | `Advisory only. ATLAS does not execute or authorise this change.` |
 
 Every set's explanation ends with `R_AUTHORITY`. Forbidden words as in M4 §E plus `will`, `guarantee`, `profit`.
+**CCR-006:** `R_ASSUMPTION` placement, emission rule and class (C1); forbidden-word post-check with the single
+`R_ECONOMICS` negation exemption (C2); `R_RANK` variants and the `R_ECONOMICS` rate under `economic` (C3); the M5
+numeral post-check and `R_OVERLOAD_END` rule (C4). Post-check failures throw `RecommendationError('FORMAT_VIOLATION')`.
 
 ## P. Sensitivity (narrow)
 
@@ -249,6 +253,7 @@ Service (GET only, 127.0.0.1):
 - `GET /api/recommendations?register=observed&t=&horizon_t=&station=&objective=operational|economic&value=low|base|high&candidates=<ids>`
   → `{ set, lines }`. Non-observed register → `RECOMMEND_REQUIRES_OBSERVED_BASE`; bounds per §S.
 - `GET /api/recommendations/evidence?…same params…&candidate_id=` → resolved refs.
+- `station=` restricts the candidate pool before evaluation; a set is never filtered after construction (CCR-006 C5).
 
 ## R. Experience
 
@@ -257,6 +262,8 @@ section lists the server's `lines` verbatim: candidates with status chips, the n
 ASSUMED chip, trade-offs, and an evidence expander from the evidence route. `R_AUTHORITY` is always shown. The
 browser computes nothing. **Deferred:** viewing a candidate's full world as frames. That needs new frame registers
 (an `atlas-frame` change, a future CCR).
+**CCR-006 C6:** horizon `min(t + 4200, range.max_t)`; lines inserted as text in server order; non-200 shows
+`Recommendations unavailable: {error.code}` and no lines.
 
 ## S. Bounds
 
@@ -308,9 +315,10 @@ runtime code. `--check` reproduces `answer-key.json` (sha256 `7598f59378507ed348
 | T-EPISTEMIC | case 8; attempts to mark economics `simulated` or a ranking `derived` are rejected |
 | T-EXPLANATION | templates verbatim; numeral and forbidden-word post-checks; `R_AUTHORITY` last |
 | T-API | facade + service, bounds, observed-only, required `horizon_t` |
+| T-CCR006 | the tests in `contract-changes/CCR-006.md` §5 |
 | T-UI | Playwright: real click on Fry at observed 18:20 shows the server lines verbatim, ASSUMED chip on economics, authority line; poisoned server response displayed as given |
 | T-PACK | pack has no entity ids, station names or rule-id literals; rule lookup by kind |
-| T-GENERALITY | a renamed-ids mini world (persons, stations, rule ids) yields the same statuses as its original |
+| T-GENERALITY | a renamed-ids mini world (persons, stations, rule ids) yields the same statuses as its original; scoped by CCR-006 C9 (rule-id renaming stays with CCR-003) |
 | Regression | M1, M2 28/28, M3 Playwright 12/12, M4 suites, Signet, `oracle --check`, M4 and M5 reference `--check` |
 
 ## V. Safety and authority
@@ -341,8 +349,9 @@ command, no policy override, no clinical use. Recommendations are not approvals;
 
 ## Y. CCRs
 
-**None required.** M5 adds new artifacts and one additive facade function (`runScenarioSpec`); it changes no frozen
-contract. **CCR-003 note:** skills mapping (`st_` convention), rule-id-by-kind resolution in the M4 station-flow pack,
+**CCR-006** (M5 closure, 2026-10-10): assumption line, explanation post-checks, objective-aware rank text, station
+scope, inspector horizon, T-GENERALITY scope. No other frozen contract changes. M5 adds new artifacts and one additive facade function
+(`runScenarioSpec`). **CCR-003 note:** skills mapping (`st_` convention), rule-id-by-kind resolution in the M4 station-flow pack,
 and work-id minting remain bundled in the planned CCR-003 identity-conventions work, before any second domain or
 script-to-world. M5 itself resolves rules by kind and calls the single skills function.
 
