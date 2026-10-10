@@ -11,6 +11,16 @@ import {
   listInstants,
 } from '../capabilities.js';
 import { loadSource } from './source.js';
+
+async function loadM5Config(): Promise<unknown> {
+  const { readFile } = await import('node:fs/promises');
+  const { fileURLToPath } = await import('node:url');
+  const { dirname, join } = await import('node:path');
+  const here = dirname(fileURLToPath(import.meta.url));
+  // dist/src/experience/server.js -> impl/m5-config.json
+  const p = join(here, '..', '..', '..', 'm5-config.json');
+  return JSON.parse(await readFile(p, 'utf8'));
+}
 import { initRegisters, listRegisters, projectFrame, inspectEntity, getRegister, ProjectError } from './project.js';
 import type { RegisterKind } from './types.js';
 
@@ -200,6 +210,56 @@ async function handleApi(pathname: string, params: URLSearchParams, res: ServerR
         });
       }
       sendJson(res, 200, { diagnosis: fDiagnosis, lines: fLines });
+    } catch (e: any) {
+      if (e.code) sendErr(res, e.code, e.message);
+      else sendErr(res, 'INTERNAL', 'internal error', 500);
+    }
+    return;
+  }
+  if (pathname === '/api/recommendations') {
+    // 19 §Q: GET /api/recommendations?register=observed&t=&horizon_t=&station=&objective=operational|economic&value=low|base|high&candidates=<ids>
+    const register = params.get('register') ?? '';
+    const tParam = params.get('t');
+    const hParam = params.get('horizon_t');
+    const station = params.get('station') ?? undefined;
+    const objectiveId = params.get('objective') ?? 'operational';
+    const valueKey = (params.get('value') ?? 'base') as 'low' | 'base' | 'high';
+    const candidateIds = params.get('candidates')?.split(',').filter(Boolean);
+    if (register !== 'observed') {
+      sendErr(res, 'RECOMMEND_REQUIRES_OBSERVED_BASE', 'recommendations require the observed register');
+      return;
+    }
+    if (tParam === null || hParam === null) {
+      sendErr(res, 'T_NOT_INTEGER', 'missing required parameters: t, horizon_t');
+      return;
+    }
+    const t = Number(tParam);
+    const horizon_t = Number(hParam);
+    if (!Number.isInteger(t) || !Number.isInteger(horizon_t)) {
+      sendErr(res, 'T_NOT_INTEGER', 't and horizon_t must be integers');
+      return;
+    }
+    if (objectiveId !== 'operational' && objectiveId !== 'economic') {
+      sendErr(res, 'OBJECTIVE_REQUIRED', 'objective must be operational or economic');
+      return;
+    }
+    try {
+      const { diagnoseAtTime, evaluateRecommendationsFacade, explainRecommendations } = await import('../capabilities.js');
+      const { world } = await loadSource();
+      const { ledger, register: regDef } = getRegister('observed' as RegisterKind);
+      const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch });
+      const config = await loadM5Config();
+      const objective = objectiveId === 'operational'
+        ? { id: 'operational', primary_metric: 'order_time_in_system_s', direction: 'minimize', tie_breakers: ['fewer new_overload_stations', 'larger orders_completed_in_window', 'candidate id'], conditional_on: 'new_overload_stations' }
+        : { id: 'economic', primary_metric: 'net_economic_effect', direction: 'maximize', tie_breakers: ['fewer new_overload_stations', 'larger orders_completed_in_window', 'candidate id'], conditional_on: 'new_overload_stations', economic_value_key: valueKey };
+      const set = evaluateRecommendationsFacade({ world, ledger, diagnosis, config, horizon_t, objective, candidate_ids: candidateIds }) as any;
+      // Filter to station if given.
+      let fSet = set;
+      if (station) {
+        fSet = { ...set, candidates: set.candidates.filter((c: any) => c.to === station) };
+      }
+      const { lines } = explainRecommendations({ world, set: fSet });
+      sendJson(res, 200, { set: fSet, lines });
     } catch (e: any) {
       if (e.code) sendErr(res, e.code, e.message);
       else sendErr(res, 'INTERNAL', 'internal error', 500);

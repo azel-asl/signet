@@ -326,6 +326,30 @@ async function selectEntity(entityId: string): Promise<void> {
           dHtml += '</ul>';
           body.innerHTML += dHtml;
         }
+        // Recommendations section (M5 §R): observed register only, when the
+        // selected station has a capacity_limit claim. Read-only; the browser
+        // computes nothing. Lines come verbatim from /api/recommendations.
+        const hasCapLimit = dData.diagnosis?.claims?.some((c: any) =>
+          c.kind === 'capacity_limit' && c.subject === entityId);
+        if (currentRegister === 'observed' && hasCapLimit) {
+          try {
+            const rRes = await fetch(`/api/recommendations?register=observed&t=${currentT}&horizon_t=${currentT + 4200}&station=${encodeURIComponent(entityId)}`);
+            if (rRes.ok) {
+              const rData: any = await rRes.json();
+              if (rData.lines?.length) {
+                let rHtml = '<h3>Recommendations</h3><ul data-testid="recommendation-lines">';
+                for (const line of rData.lines) {
+                  const assumed = line.claim_class === 'assumed' ? ' <span data-testid="assumed-chip">ASSUMED</span>' : '';
+                  rHtml += `<li>${line.text}${assumed}</li>`;
+                }
+                rHtml += '</ul>';
+                body.innerHTML += rHtml;
+              }
+            }
+          } catch {
+            // Recommendations are optional; inspector works without them.
+          }
+        }
       }
     } catch {
       // Diagnosis is optional; inspector works without it.

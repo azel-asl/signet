@@ -1,0 +1,10 @@
+{
+  "atlas_schema": "atlas-m5-config/0.1",
+  "note": "Explicit, frozen inputs for the canonical M5 case. Every value here is a configured assumption, not an observation.",
+  "candidate_windows": [
+    { "label": "30m", "start_offset_s": 0, "end_offset_s": 1800 },
+    { "label": "to_horizon", "start_offset_s": 0, "end": "horizon" }
+  ],
+  "economics": { "reassignment_cost_per_move": 0, "claim_class": "assumed" },
+  "sensitivity": { "delay_cost_per_order_minute": { "low": 0.10, "base": 0.35, "high": 1.00 } }
+}

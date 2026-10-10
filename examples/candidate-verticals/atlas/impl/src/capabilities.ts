@@ -11,6 +11,11 @@ import { buildBranchLog } from './branch.js';
 import { loadWorld } from './world.js';
 import { loadLedger } from './ledger.js';
 import type { AtlasEvent, World, EvidenceRef, Seconds } from './types.js';
+import { generateCandidateSeeds } from './recommend/candidates.js';
+import { evaluateRecommendations } from './recommend/core.js';
+import { explainSet, explainCandidate } from './recommend/format.js';
+import { resolveRef as resolveRecRef } from './recommend/resolve.js';
+import type { RecommendationSet } from './recommend/types.js';
 
 function asJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -157,6 +162,79 @@ export async function runScenario(input: {
       parentLedgerSha256: actualParentLedgerSha256,
       worldSha256: actualWorldSha256,
       scenario,
+      arm,
+      baseState,
+    });
+  const b = run('baseline');
+  const s = run('scenario');
+  const arm = (r: typeof b): FacadeArm => asJson({ receipt: r.receipt, events: r.events, windowMetrics: r.windowMetrics });
+  return { baseline: arm(b), scenario: arm(s) };
+}
+
+/**
+ * runScenarioSpec({world, ledger, scenario}) → { baseline, scenario }.
+ * M5 additive facade (19 §Q): M2 runArm without a file path. The scenario is
+ * supplied as an object; it is compiled into the same Scenario structure
+ * loadScenario produces and run through the same runArm. No second reducer,
+ * scheduler, or temporal semantics.
+ */
+export function runScenarioSpec(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  scenario: {
+    id: string;
+    name: string;
+    base_t: Seconds;
+    horizon_t: Seconds;
+    interventions: { id: string; employee: string; from: string | null; to: string | null; at_t: Seconds }[];
+  };
+}): { baseline: FacadeArm; scenario: FacadeArm } {
+  const { world, ledger, scenario: spec } = input;
+  const actualWorldSha256 = canonHash(world);
+  const actualParentLedgerSha256 = canonHash(ledger);
+  const parentBranch = (ledger[0]?.branch as string) ?? 'history:day1';
+  const tB = spec.base_t;
+  const { state: baseState } = reduceTo(world, ledger, tB);
+
+  // Build the Scenario in-memory with the same shape loadScenario returns.
+  const baseIso = iso(world, tB);
+  const horizonIso = iso(world, spec.horizon_t);
+  const scenario = {
+    atlas_schema: 'atlas-scenario/0.1' as const,
+    id: spec.id,
+    name: spec.name,
+    world: world.metadata.id,
+    base: { branch: parentBranch, t: baseIso, t_s: tB },
+    horizon: horizonIso,
+    horizon_t: spec.horizon_t,
+    arrivals_source: 'historical_replay' as const,
+    duration_model: 'nominal' as const,
+    in_progress_rule:
+      'work in progress at the branch point completes at max(branch_t, started_t + nominal duration)',
+    seed: 0,
+    baseline_interventions: [],
+    scenario_interventions: spec.interventions.map((iv) => ({
+      id: iv.id,
+      kind: 'reassign' as const,
+      employee: iv.employee,
+      from: iv.from,
+      to: iv.to,
+      at: iso(world, iv.at_t),
+      at_t: iv.at_t,
+    })),
+    comparison_window: { from: baseIso, to: horizonIso },
+    required_authority: 'advisory_only',
+    sha256: canonHash(spec),
+  };
+
+  const run = (arm: 'baseline' | 'scenario') =>
+    runArm({
+      world,
+      parentEvents: ledger,
+      parentBranch,
+      parentLedgerSha256: actualParentLedgerSha256,
+      worldSha256: actualWorldSha256,
+      scenario: scenario as never,
       arm,
       baseState,
     });
@@ -453,4 +531,65 @@ function resolvePointer(obj: Record<string, unknown>, pointer: string): unknown 
     current = (current as Record<string, unknown>)[part];
   }
   return current ?? null;
+}
+
+/**
+ * M5 facade (19 §Q): generateCandidates, evaluateRecommendations,
+ * explainRecommendations, resolveRecommendationEvidence.
+ * Additive; JSON in/out. Observed register only where specified.
+ */
+
+export function generateCandidates(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  diagnosis: unknown;
+  config: unknown;
+  horizon_t: Seconds;
+}): unknown {
+  const seeds = generateCandidateSeeds({
+    world: input.world,
+    ledger: input.ledger,
+    diagnosis: input.diagnosis as never,
+    config: input.config as never,
+    horizon_t: input.horizon_t,
+  });
+  return asJson(seeds);
+}
+
+export function evaluateRecommendationsFacade(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  diagnosis: unknown;
+  config: unknown;
+  horizon_t: Seconds;
+  objective: unknown;
+  candidate_ids?: string[];
+}): unknown {
+  const set = evaluateRecommendations({
+    world: input.world,
+    ledger: input.ledger,
+    diagnosis: input.diagnosis as never,
+    config: input.config as never,
+    horizon_t: input.horizon_t,
+    objective: input.objective as never,
+    candidate_ids: input.candidate_ids,
+  });
+  return asJson(set);
+}
+
+export function explainRecommendations(input: {
+  world: World;
+  set: unknown;
+  candidate_id?: string;
+}): { lines: { candidate_id: string | null; text: string; claim_class: string }[] } {
+  const set = input.set as RecommendationSet;
+  let lines;
+  if (input.candidate_id) {
+    const c = set.candidates.find((x) => x.id === input.candidate_id);
+    if (!c) throw new Error(`unknown candidate_id ${input.candidate_id}`);
+    lines = explainCandidate(input.world, c);
+  } else {
+    lines = explainSet(input.world, set);
+  }
+  return asJson({ lines });
 }
