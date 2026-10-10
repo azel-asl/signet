@@ -11,6 +11,7 @@ import type {
   EvidenceRef, WindowMetrics,
 } from './types.js';
 import { RecommendationError } from './types.js';
+import { resolveRef } from './resolve.js';
 import { generateCandidateSeeds, MAX_CANDIDATES } from './candidates.js';
 import { checkEligibility } from './eligibility.js';
 import { compileInterventions } from './compile.js';
@@ -49,6 +50,14 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
   const t = diagnosis.context.t as Seconds;
   const tB = t; // M2 branch interval is [t, horizon_t]
   const tH = horizon_t;
+
+  // 15s request bound (19 §S). Deadline checked at each simulation.
+  const deadline = Date.now() + 15000;
+  const checkDeadline = () => {
+    if (Date.now() > deadline) {
+      throw new RecommendationError('BOUND_EXCEEDED', 'request exceeded 15s bound');
+    }
+  };
 
   // Bounds (19 §S).
   if (!(tH > tB)) {
@@ -143,6 +152,7 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
   const simulated: { seed: typeof eligibleSeeds[number]; metrics: WindowMetrics; runId: string; events: AtlasEvent[]; interventions: ReturnType<typeof compileInterventions> }[] = [];
 
   for (const seed of eligibleSeeds) {
+    checkDeadline(); // 15s bound
     const interventions = compileInterventions({ world, seed });
     const spec = {
       id: `m5-${seed.id}`,
@@ -209,9 +219,15 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
     const seed = s.seed;
     const r = rankable.find((x) => x.id === seed.id)!;
     const economics = computeEconomics({ world, config, baseline: baselineMetrics, scenario: s.metrics });
-    econById.set(seed.id, { net_effect: economics.by_value[objective.economic_value_key ?? 'base'].net_effect });
+    const valueKey = objective.economic_value_key ?? 'base';
+    const netEffect = economics.by_value[valueKey].net_effect;
+    econById.set(seed.id, { net_effect: netEffect });
 
-    const improvement = -r.delta.order_time_in_system_s;
+    // CCR-006 §3: under the economic objective, improvement is net economic
+    // effect at the chosen rate; net_effect <= 0 → not_recommended.
+    const improvement = objective.id === 'economic'
+      ? netEffect
+      : -r.delta.order_time_in_system_s;
     const status = assignStatus({ improvement, dominatedBy: dominatedBy.get(seed.id) ?? [], newOverloadStations: r.new_overload_stations });
     const toffs = tradeOffs({ baseline: baselineMetrics, scenario: s.metrics, to: seed.to });
 
@@ -334,8 +350,14 @@ export function evaluateRecommendations(input: EvaluateInput): RecommendationSet
     set_hash: '',
   };
   set.set_hash = createHash('sha256').update(canonHash({ ...set, set_hash: '' })).digest('hex');
+
+  // CCR-006 §M: resolve every ref at construction (including no-action sets).
+  resolveAllEvidence({ world, ledger, diagnosis, config, set, simLogs });
+
   return set;
 }
+
+
 
 function traceContentSha256(events: AtlasEvent[]): string {
   const proj = events.map((e) => ({ t: e.t, type: e.type, subject: e.subject, data: e.data }));
@@ -438,4 +460,41 @@ function emptyMetrics(): WindowMetrics {
     delay_s_over_target_censored: 0,
     stations: {},
   };
+}
+
+function resolveAllEvidence(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  diagnosis: Diagnosis;
+  config: M5Config;
+  set: RecommendationSet;
+  simLogs: Map<string, AtlasEvent[]>;
+}): void {
+  const { world, ledger, diagnosis, config, set, simLogs } = input;
+  const t = diagnosis.context.t;
+  const { state: rawState } = reduceTo(world, ledger, t as Seconds);
+  // Ensure all persons are represented in the state (for evidence resolution).
+  for (const p of world.entities.filter((e) => e.type === 'person')) {
+    if (!(p.id in rawState.assignments)) rawState.assignments[p.id] = null;
+    if (!(p.id in rawState.on_shift)) rawState.on_shift[p.id] = false;
+  }
+  // resolve.ts expects snapshot to be the wrapped WorldState ({state: {...}}).
+  const ctx = {
+    world,
+    ledger,
+    diagnosis: diagnosis as never,
+    simLogs,
+    config,
+    snapshot: { state: rawState },
+  };
+  for (const c of set.candidates) {
+    const allRefs = [...c.evidence, ...c.eligibility.evidence];
+    for (const ref of allRefs) {
+      const resolved = resolveRef(ctx, ref as never);
+      // null is a valid resolution (e.g., unassigned station); only undefined/MISSING is dangling.
+      if (resolved === undefined) {
+        throw new RecommendationError('EVIDENCE_UNRESOLVED', `dangling ref: ${JSON.stringify(ref)}`);
+      }
+    }
+  }
 }

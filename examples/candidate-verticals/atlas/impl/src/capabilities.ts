@@ -16,6 +16,7 @@ import { evaluateRecommendations } from './recommend/core.js';
 import { explainSet, explainCandidate } from './recommend/format.js';
 import { resolveRef as resolveRecRef } from './recommend/resolve.js';
 import type { RecommendationSet } from './recommend/types.js';
+import { resolveRef as resolveRecRef2 } from './recommend/resolve.js';
 
 function asJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
@@ -587,9 +588,67 @@ export function explainRecommendations(input: {
   if (input.candidate_id) {
     const c = set.candidates.find((x) => x.id === input.candidate_id);
     if (!c) throw new Error(`unknown candidate_id ${input.candidate_id}`);
-    lines = explainCandidate(input.world, c);
+    const baselineLast = set.baseline.metrics.stations[c.to]?.overload_last_t ?? null;
+    lines = explainCandidate(input.world, c, set.objective, baselineLast);
   } else {
     lines = explainSet(input.world, set);
   }
   return asJson({ lines });
+}
+
+/**
+ * M5 facade (19 §Q): resolveRecommendationEvidence.
+ * Resolves a candidate's evidence refs against world, ledger, diagnosis,
+ * config, and sim logs. Returns the resolved refs.
+ */
+export function resolveRecommendationEvidence(input: {
+  world: World;
+  ledger: AtlasEvent[];
+  diagnosis: unknown;
+  config: unknown;
+  set: unknown;
+  candidate_id: string;
+}): unknown[] {
+  const set = input.set as import('./recommend/types.js').RecommendationSet;
+  const c = set.candidates.find((x) => x.id === input.candidate_id);
+  if (!c) throw new Error(`unknown candidate_id ${input.candidate_id}`);
+
+  // Build resolution context. Sim logs are reconstructed from the set's
+  // simulation metadata (run_id -> events would require retained logs;
+  // for the facade we resolve non-sim refs and report sim refs as resolvable
+  // if the run_id matches the candidate's simulation).
+  const t = (input.diagnosis as { context: { t: number } }).context.t;
+  const { state: rawState } = reduceTo(input.world, input.ledger, t as Seconds);
+  for (const p of input.world.entities.filter((e) => e.type === 'person')) {
+    if (!(p.id in rawState.assignments)) rawState.assignments[p.id] = null;
+    if (!(p.id in rawState.on_shift)) rawState.on_shift[p.id] = false;
+  }
+
+  const simLogs = new Map<string, AtlasEvent[]>();
+  // For sim_event refs, we check that the run_id matches the candidate's
+  // simulation run_id; the actual events are not retained by the facade.
+  const ctx = {
+    world: input.world,
+    ledger: input.ledger,
+    diagnosis: input.diagnosis as never,
+    simLogs,
+    config: input.config,
+    snapshot: { state: rawState },
+  };
+
+  const out: unknown[] = [];
+  const allRefs = [...c.evidence, ...c.eligibility.evidence];
+  for (const ref of allRefs) {
+    if ((ref as { kind: string }).kind === 'sim_event') {
+      const r = ref as { kind: 'sim_event'; run_id: string; event_id: string };
+      // Valid if run_id matches the candidate's simulation.
+      const valid = c.simulation?.run_id === r.run_id;
+      out.push({ ref, resolved: valid ? '[sim_event: run_id verified]' : null });
+      if (!valid) throw new Error(`EVIDENCE_UNRESOLVED: sim_event run_id mismatch for ${input.candidate_id}`);
+    } else {
+      const resolved = resolveRecRef2(ctx, ref as never);
+      out.push({ ref, resolved: resolved !== null && resolved !== undefined ? '[resolved]' : null });
+    }
+  }
+  return asJson(out);
 }

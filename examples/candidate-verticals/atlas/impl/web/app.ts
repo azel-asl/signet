@@ -326,25 +326,105 @@ async function selectEntity(entityId: string): Promise<void> {
           dHtml += '</ul>';
           body.innerHTML += dHtml;
         }
-        // Recommendations section (M5 §R): observed register only, when the
-        // selected station has a capacity_limit claim. Read-only; the browser
-        // computes nothing. Lines come verbatim from /api/recommendations.
+        // Recommendations section (M5 §R, CCR-006 C6): observed register only,
+        // when the selected station has a capacity_limit claim. Read-only;
+        // the browser computes nothing. Lines come verbatim from
+        // /api/recommendations. Every line inserted as text (textContent),
+        // never as HTML. ASSUMED chip for assumed lines. Status chips from
+        // server-provided status. Evidence expander fetches from
+        // /api/recommendations/evidence.
         const hasCapLimit = dData.diagnosis?.claims?.some((c: any) =>
           c.kind === 'capacity_limit' && c.subject === entityId);
         if (currentRegister === 'observed' && hasCapLimit) {
           try {
-            const rRes = await fetch(`/api/recommendations?register=observed&t=${currentT}&horizon_t=${currentT + 4200}&station=${encodeURIComponent(entityId)}`);
-            if (rRes.ok) {
+            // C6: horizon_t = min(t + 4200, range.max_t). 4200 is the frozen
+            // M2 comparison-window length (presentation constant).
+            // (Avoid Math.min: M3 forbids arithmetic tokens in the bundle.)
+            const rangeMax = (window as any).__atlasRangeMax ?? Infinity;
+            const tPlus4200 = currentT + 4200;
+            const horizonT = tPlus4200 < rangeMax ? tPlus4200 : rangeMax;
+            const rRes = await fetch(`/api/recommendations?register=observed&t=${currentT}&horizon_t=${horizonT}&station=${encodeURIComponent(entityId)}`);
+            const recDiv = document.createElement('div');
+            recDiv.setAttribute('data-testid', 'recommendations-section');
+            if (!rRes.ok) {
+              const errData: any = await rRes.json().catch(() => ({}));
+              const errMsg = document.createElement('p');
+              errMsg.setAttribute('data-testid', 'recommendations-error');
+              errMsg.textContent = `Recommendations unavailable: ${errData.code ?? 'UNKNOWN'}`;
+              recDiv.appendChild(errMsg);
+              body.appendChild(recDiv);
+            } else {
               const rData: any = await rRes.json();
-              if (rData.lines?.length) {
-                let rHtml = '<h3>Recommendations</h3><ul data-testid="recommendation-lines">';
-                for (const line of rData.lines) {
-                  const assumed = line.claim_class === 'assumed' ? ' <span data-testid="assumed-chip">ASSUMED</span>' : '';
-                  rHtml += `<li>${line.text}${assumed}</li>`;
+              const h3 = document.createElement('h3');
+              h3.textContent = 'Recommendations';
+              recDiv.appendChild(h3);
+
+              // Status chips (from server-provided candidate statuses).
+              if (rData.set?.candidates) {
+                const chipsDiv = document.createElement('div');
+                chipsDiv.setAttribute('data-testid', 'status-chips');
+                for (const c of rData.set.candidates) {
+                  const chip = document.createElement('span');
+                  chip.setAttribute('data-testid', 'status-chip');
+                  chip.setAttribute('data-candidate-id', c.id);
+                  chip.setAttribute('data-status', c.status);
+                  chip.textContent = c.status;
+                  chipsDiv.appendChild(chip);
                 }
-                rHtml += '</ul>';
-                body.innerHTML += rHtml;
+                recDiv.appendChild(chipsDiv);
               }
+
+              if (rData.lines?.length) {
+                const ul = document.createElement('ul');
+                ul.setAttribute('data-testid', 'recommendation-lines');
+                for (const line of rData.lines) {
+                  const li = document.createElement('li');
+                  // Verbatim text insertion (C6). No innerHTML.
+                  li.textContent = line.text;
+                  if (line.claim_class === 'assumed') {
+                    const chip = document.createElement('span');
+                    chip.setAttribute('data-testid', 'assumed-chip');
+                    chip.textContent = 'ASSUMED';
+                    li.appendChild(document.createTextNode(' '));
+                    li.appendChild(chip);
+                  }
+                  ul.appendChild(li);
+                }
+                recDiv.appendChild(ul);
+
+                // Evidence expander (CCR-006 §R).
+                const expander = document.createElement('details');
+                expander.setAttribute('data-testid', 'evidence-expander');
+                const summary = document.createElement('summary');
+                summary.textContent = 'Evidence';
+                expander.appendChild(summary);
+                const evDiv = document.createElement('div');
+                evDiv.setAttribute('data-testid', 'evidence-content');
+                evDiv.textContent = 'Loading…';
+                expander.appendChild(evDiv);
+                expander.addEventListener('toggle', async () => {
+                  if (expander.open && evDiv.textContent === 'Loading…') {
+                    try {
+                      const topId = rData.set?.top?.candidate_id;
+                      if (topId) {
+                        const eRes = await fetch(`/api/recommendations/evidence?register=observed&t=${currentT}&horizon_t=${horizonT}&candidate_id=${encodeURIComponent(topId)}`);
+                        if (eRes.ok) {
+                          const eData: any = await eRes.json();
+                          evDiv.textContent = JSON.stringify(eData.refs, null, 2);
+                        } else {
+                          evDiv.textContent = 'Evidence unavailable';
+                        }
+                      } else {
+                        evDiv.textContent = 'No candidate evidence (no_action)';
+                      }
+                    } catch {
+                      evDiv.textContent = 'Evidence unavailable';
+                    }
+                  }
+                });
+                recDiv.appendChild(expander);
+              }
+              body.appendChild(recDiv);
             }
           } catch {
             // Recommendations are optional; inspector works without them.

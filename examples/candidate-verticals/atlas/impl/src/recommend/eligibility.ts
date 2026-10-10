@@ -36,7 +36,10 @@ export function checkEligibility(input: {
   const reasons: EligibilityReason[] = [];
   const evidence: EvidenceRef[] = [];
 
-  const { state } = reduceTo(world, ledger, t as never);
+  // CCR-006: evaluate on-shift, source assignment, and other time-dependent
+  // facts at candidate start_t, not branch t.
+  const startT = seed.window.start_t;
+  const { state } = reduceTo(world, ledger, startT as never);
   const person = world.entities.find((e) => e.id === seed.resource);
   const pi = personIndex(world, seed.resource);
 

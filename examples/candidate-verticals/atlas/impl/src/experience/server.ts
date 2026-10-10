@@ -244,7 +244,7 @@ async function handleApi(pathname: string, params: URLSearchParams, res: ServerR
       return;
     }
     try {
-      const { diagnoseAtTime, evaluateRecommendationsFacade, explainRecommendations } = await import('../capabilities.js');
+      const { diagnoseAtTime, generateCandidates, evaluateRecommendationsFacade, explainRecommendations } = await import('../capabilities.js');
       const { world } = await loadSource();
       const { ledger, register: regDef } = getRegister('observed' as RegisterKind);
       const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch });
@@ -252,14 +252,49 @@ async function handleApi(pathname: string, params: URLSearchParams, res: ServerR
       const objective = objectiveId === 'operational'
         ? { id: 'operational', primary_metric: 'order_time_in_system_s', direction: 'minimize', tie_breakers: ['fewer new_overload_stations', 'larger orders_completed_in_window', 'candidate id'], conditional_on: 'new_overload_stations' }
         : { id: 'economic', primary_metric: 'net_economic_effect', direction: 'maximize', tie_breakers: ['fewer new_overload_stations', 'larger orders_completed_in_window', 'candidate id'], conditional_on: 'new_overload_stations', economic_value_key: valueKey };
-      const set = evaluateRecommendationsFacade({ world, ledger, diagnosis, config, horizon_t, objective, candidate_ids: candidateIds }) as any;
-      // Filter to station if given.
-      let fSet = set;
+      // C5: station= restricts the candidate pool BEFORE evaluation.
+      // Equivalent to candidate_ids = generated candidates whose `to` is <station>.
+      let effectiveIds = candidateIds;
       if (station) {
-        fSet = { ...set, candidates: set.candidates.filter((c: any) => c.to === station) };
+        const allSeeds = generateCandidates({ world, ledger, diagnosis, config, horizon_t }) as any[];
+        const stationIds = allSeeds.filter((s: any) => s.to === station).map((s: any) => s.id);
+        effectiveIds = effectiveIds ? effectiveIds.filter((id) => stationIds.includes(id)) : stationIds;
       }
-      const { lines } = explainRecommendations({ world, set: fSet });
-      sendJson(res, 200, { set: fSet, lines });
+      const set = evaluateRecommendationsFacade({ world, ledger, diagnosis, config, horizon_t, objective, candidate_ids: effectiveIds }) as any;
+      const { lines } = explainRecommendations({ world, set });
+      sendJson(res, 200, { set, lines });
+    } catch (e: any) {
+      if (e.code) sendErr(res, e.code, e.message);
+      else sendErr(res, 'INTERNAL', 'internal error', 500);
+    }
+    return;
+  }
+  if (pathname === '/api/recommendations/evidence') {
+    // 19 §Q: GET /api/recommendations/evidence?register=observed&t=&horizon_t=&candidate_id=
+    const register = params.get('register') ?? '';
+    const tParam = params.get('t');
+    const hParam = params.get('horizon_t');
+    const candidateId = params.get('candidate_id');
+    if (register !== 'observed') {
+      sendErr(res, 'RECOMMEND_REQUIRES_OBSERVED_BASE', 'recommendations require the observed register');
+      return;
+    }
+    if (tParam === null || hParam === null || !candidateId) {
+      sendErr(res, 'T_NOT_INTEGER', 'missing required parameters: t, horizon_t, candidate_id');
+      return;
+    }
+    const t = Number(tParam);
+    const horizon_t = Number(hParam);
+    try {
+      const { diagnoseAtTime, evaluateRecommendationsFacade, resolveRecommendationEvidence } = await import('../capabilities.js');
+      const { world } = await loadSource();
+      const { ledger, register: regDef } = getRegister('observed' as RegisterKind);
+      const diagnosis = diagnoseAtTime({ world, ledger, t, branch: regDef.branch });
+      const config = await loadM5Config();
+      const objective = { id: 'operational', primary_metric: 'order_time_in_system_s', direction: 'minimize', tie_breakers: [], conditional_on: 'new_overload_stations' };
+      const set = evaluateRecommendationsFacade({ world, ledger, diagnosis, config, horizon_t, objective }) as any;
+      const resolved = resolveRecommendationEvidence({ world, ledger, diagnosis, config, set, candidate_id: candidateId });
+      sendJson(res, 200, { refs: resolved });
     } catch (e: any) {
       if (e.code) sendErr(res, e.code, e.message);
       else sendErr(res, 'INTERNAL', 'internal error', 500);

@@ -48,8 +48,9 @@ export function computeEconomics(input: {
     inputs: [
       { name: 'delay_cost_per_order_minute', value: baseRate, claim_class: 'assumed', source: rateSource },
       { name: 'reassignment_cost_per_move', value: moveCost, claim_class: 'assumed', source: { kind: 'config', path: '/economics/reassignment_cost_per_move' } },
-      // Incremental labor is zero for reassign_resource: no paid hours change.
-      { name: 'incremental_labor_cost', value: 0, claim_class: 'configured', source: { kind: 'config', path: '/economics/incremental_labor' } },
+      // Incremental labor is zero for reassign_resource: no paid hours change (§I).
+      // Source is the economics config object (the zero is definitional).
+      { name: 'incremental_labor_cost', value: 0, claim_class: 'configured', source: { kind: 'config', path: '/economics' } },
     ],
     by_value,
     claim_class: 'assumed',
