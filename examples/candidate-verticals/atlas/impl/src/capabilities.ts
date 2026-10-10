@@ -589,7 +589,9 @@ export function explainRecommendations(input: {
     const c = set.candidates.find((x) => x.id === input.candidate_id);
     if (!c) throw new Error(`unknown candidate_id ${input.candidate_id}`);
     const baselineLast = set.baseline.metrics.stations[c.to]?.overload_last_t ?? null;
-    lines = explainCandidate(input.world, c, set.objective, baselineLast);
+    const valueKey = set.objective.id === 'economic' ? (set.objective.economic_value_key ?? 'base') : 'base';
+    const effectiveRate = (set as any).sensitivity?.values?.[valueKey];
+    lines = explainCandidate(input.world, c, set.objective, baselineLast, effectiveRate);
   } else {
     lines = explainSet(input.world, set);
   }

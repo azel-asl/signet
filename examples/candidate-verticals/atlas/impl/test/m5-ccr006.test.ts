@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { diagnoseAtTime, evaluateRecommendationsFacade, explainRecommendations, resolveRecommendationEvidence } from '../src/capabilities.js';
 import { evaluateRecommendations } from '../src/recommend/core.js';
-import { checkForbidden, FROZEN_ASSUMPTION } from '../src/recommend/format.js';
+import { checkForbidden, checkNumerals, FROZEN_ASSUMPTION } from '../src/recommend/format.js';
 import { RecommendationError } from '../src/recommend/types.js';
 import type { AtlasEvent, World } from '../src/types.js';
 import type { Diagnosis } from '../src/diagnose/types.js';
@@ -160,5 +160,45 @@ describe('T-EVIDENCE-ALL', () => {
     }) as RecommendationSet;
     expect(naSet.top.kind).toBe('no_action');
     // No candidates, so no refs to resolve — completes deterministically.
+  });
+});
+
+describe('T-NUMERAL: production numeral post-check', () => {
+  it('every canonical line passes production C4', () => {
+    // Lines were already generated via explainRecommendations (production path).
+    // If any had unsupported numerals, the beforeAll would have thrown.
+    expect(lines.length).toBeGreaterThan(0);
+    // Verify specific numerals are present and permitted.
+    const texts = lines.map((l) => l.text).join('\n');
+    expect(texts).toContain('18:20'); // clock time
+    expect(texts).toContain('Ranked 1:'); // rank
+    expect(texts).toContain('65 minutes'); // overload end
+  });
+
+  it('injected unsupported numeral fails via production path', () => {
+    // Create a candidate with a tampered delta to inject an unsupported numeral.
+    // We do this by directly testing checkNumerals with a production-generated line
+    // modified to contain an unsupported numeral.
+    const line = {
+      candidate_id: 'test',
+      text: 'SIMULATED · Versus doing nothing: order time in system improves by 99999s, 13 more orders completed, Fry queue burden down 100s.',
+      claim_class: 'simulated',
+    };
+    // 99999 is not in the sources [26498, 13, 52325] (example).
+    expect(() => checkNumerals(line, 'R_DELTA', [26498, 13, 52325])).toThrow(RecommendationError);
+  });
+
+  it('clock times permitted only from proper source', () => {
+    // 18:20 from start_t (18, 20) passes.
+    const line1 = { candidate_id: 'x', text: 'Sam: unassigned → Fry, 18:20–19:20.', claim_class: 'derived' };
+    expect(() => checkNumerals(line1, 'R_CANDIDATE', [18, 20, 19, 20])).not.toThrow();
+    // 18:20 with wrong sources fails.
+    expect(() => checkNumerals(line1, 'R_CANDIDATE', [9, 0, 10, 0])).toThrow(RecommendationError);
+  });
+
+  it('rate and net-effect permitted', () => {
+    const line = { candidate_id: 'x', text: 'ASSUMED · At 0.5 per order-minute over target, net effect +44.19 (delay cost only; no revenue is assumed).', claim_class: 'assumed' };
+    expect(() => checkNumerals(line, 'R_ECONOMICS', [0.5, 44.19])).not.toThrow();
+    expect(() => checkNumerals(line, 'R_ECONOMICS', [0.5, 99.99])).toThrow(RecommendationError);
   });
 });

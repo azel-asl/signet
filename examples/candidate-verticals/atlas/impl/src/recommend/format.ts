@@ -2,7 +2,8 @@
 // Fixed deterministic templates rendering only structured values.
 // C1: R_ASSUMPTION template. C2: forbidden-word narrow exception.
 // C3: objective-aware R_RANK (4 variants) and R_ECONOMICS rate.
-// C4: numeral post-check. World-local times. Entity names from world.
+// C4: numeral post-check with per-template sources (production-enforced).
+// World-local times. Entity names from world.
 // Every set's explanation ends with R_AUTHORITY. No generative prose.
 import type { World } from '../types.js';
 import type { Candidate, RecommendationSet, RecommendationObjective } from './types.js';
@@ -14,6 +15,18 @@ export interface ExplainLine {
   text: string;
   claim_class: string;
 }
+
+// Internal: line with its template for C4 source construction.
+interface TemplatedLine extends ExplainLine {
+  template: string;
+  // Structured sources for C4 numeral check.
+  numeralSources: number[];
+}
+
+type TemplateId =
+  | 'R_CANDIDATE' | 'R_ASSUMPTION' | 'R_INFEASIBLE' | 'R_DELTA'
+  | 'R_OVERLOAD_END' | 'R_TRADEOFF' | 'R_NEW_OVERLOAD' | 'R_ECONOMICS'
+  | 'R_RANK' | 'R_DOMINATED' | 'R_NO_ACTION' | 'R_AUTHORITY';
 
 // M4 §E terms + M5 additions, whole-word case-insensitive.
 const FORBIDDEN_TERMS = [
@@ -28,18 +41,23 @@ const FROZEN_ASSUMPTION = 'resource has no modeled assignment at the source; any
 const ASSUMPTION_TEMPLATE = 'ASSUMED · Observed state: {resource_name} is on shift with no assigned station at {start_hhmm}. Duties outside the modeled stations are not represented in this simulation.';
 
 function entityName(world: World, id: string): string {
-  // CCR-006: names from the canonical entity location (entity.name).
   const e = world.entities.find((x) => x.id === id);
   return e?.name ?? id;
 }
 
 function hhmm(world: World, t: number): string {
-  // World-local HH:MM using the world's UTC offset (CCR-006, 04-time).
   const local = t + offsetSeconds(world);
   const d = new Date(local * 1000);
   const hh = String(d.getUTCHours()).padStart(2, '0');
   const mm = String(d.getUTCMinutes()).padStart(2, '0');
   return `${hh}:${mm}`;
+}
+
+// Extract hour and minute as numbers from a world-local HH:MM.
+function hhmmParts(world: World, t: number): [number, number] {
+  const local = t + offsetSeconds(world);
+  const d = new Date(local * 1000);
+  return [d.getUTCHours(), d.getUTCMinutes()];
 }
 
 function fmtDeltaSeconds(v: number): string {
@@ -49,20 +67,14 @@ function fmtDeltaSeconds(v: number): string {
 }
 
 // C2: forbidden-word check with narrow R_ECONOMICS exception.
-function checkForbidden(line: ExplainLine, template: string): void {
+function checkForbidden(line: ExplainLine, template: TemplateId): void {
   let text = line.text;
-  // Step 1: remove substituted *_name placeholders (M4 §L).
-  // We approximate by removing the entity names that were substituted.
-  // (The caller passes the names used.)
-  // Step 2: for R_ECONOMICS only, remove the exact permitted ending once.
   if (template === 'R_ECONOMICS') {
     const exempt = '(delay cost only; no revenue is assumed).';
     if (text.endsWith(exempt)) {
       text = text.slice(0, -exempt.length);
     }
   }
-  // Step 3: whole-word, case-insensitive scan.
-  const lower = ` ${text.toLowerCase()} `;
   for (const term of FORBIDDEN_TERMS) {
     const pattern = new RegExp(`\\b${term.replace(/ /g, '\\s+')}\\b`, 'i');
     if (pattern.test(text)) {
@@ -71,16 +83,37 @@ function checkForbidden(line: ExplainLine, template: string): void {
   }
 }
 
-// C4: numeral post-check.
-function checkNumerals(line: ExplainLine, template: string, sources: number[]): void {
-  const tokens = line.text.match(/\d+(\.\d+)?/g) ?? [];
-  for (const tok of tokens) {
+// C4: numeral post-check. Every numeral token must equal (ignoring sign)
+// a number from the template's permitted structured sources.
+function checkNumerals(line: ExplainLine, template: TemplateId, sources: number[]): void {
+  // Match standalone numerals (word boundaries), allowing optional 's' unit suffix.
+  // Digits within IDs like emp_04 are not standalone numerals.
+  const tokens = line.text.match(/\b\d+(\.\d+)?s?\b/g) ?? [];
+  for (let tok of tokens) {
+    // Strip trailing 's' unit.
+    if (tok.endsWith('s') && !tok.endsWith('.s')) {
+      tok = tok.slice(0, -1);
+    }
     const v = parseFloat(tok);
-    // Numerically equal ignoring sign.
     if (!sources.some((s) => Math.abs(Math.abs(s) - v) < 1e-9)) {
-      throw new RecommendationError('FORMAT_VIOLATION', `unsupported numeral '${tok}' in: ${line.text}`);
+      throw new RecommendationError('FORMAT_VIOLATION', `unsupported numeral '${tok}' in ${template}: ${line.text}`);
     }
   }
+}
+
+function pushLine(
+  lines: TemplatedLine[],
+  template: TemplateId,
+  candidate_id: string | null,
+  text: string,
+  claim_class: string,
+  numeralSources: number[],
+): void {
+  const line: TemplatedLine = { candidate_id, text, claim_class, template, numeralSources };
+  // C2 and C4 enforced at construction for every line.
+  checkForbidden(line, template);
+  checkNumerals(line, template, numeralSources);
+  lines.push(line);
 }
 
 export function explainCandidate(
@@ -88,104 +121,90 @@ export function explainCandidate(
   c: Candidate,
   objective: RecommendationObjective,
   baselineOverloadLast: number | null,
+  effectiveRate?: number,
 ): ExplainLine[] {
-  const lines: ExplainLine[] = [];
+  const lines: TemplatedLine[] = [];
   const rName = entityName(world, c.resource);
   const toName = entityName(world, c.to);
   const fromName = c.from ? entityName(world, c.from) : 'unassigned';
   const startHhmm = hhmm(world, c.window.start_t);
   const endHhmm = hhmm(world, c.window.end_t);
+  const [startH, startM] = hhmmParts(world, c.window.start_t);
+  const [endH, endM] = hhmmParts(world, c.window.end_t);
 
-  // R_CANDIDATE
-  const candLine: ExplainLine = {
-    candidate_id: c.id,
-    text: `${rName}: ${fromName} → ${toName}, ${startHhmm}–${endHhmm}.`,
-    claim_class: 'derived',
-  };
-  lines.push(candLine);
+  // R_CANDIDATE — sources: hour/minute of start_t and end_t (world-local).
+  pushLine(lines, 'R_CANDIDATE', c.id,
+    `${rName}: ${fromName} → ${toName}, ${startHhmm}–${endHhmm}.`,
+    'derived', [startH, startM, endH, endM]);
 
-  // C1: R_ASSUMPTION — immediately after R_CANDIDATE, before result lines.
-  // Only for eligible candidates carrying the frozen assumption.
+  // C1: R_ASSUMPTION — sources: hour/minute of start_t.
   if (c.eligibility.eligible && c.assumptions.includes(FROZEN_ASSUMPTION)) {
-    const aLine: ExplainLine = {
-      candidate_id: c.id,
-      text: ASSUMPTION_TEMPLATE
-        .replace('{resource_name}', rName)
-        .replace('{start_hhmm}', startHhmm),
-      claim_class: 'assumed',
-    };
-    lines.push(aLine);
+    pushLine(lines, 'R_ASSUMPTION', c.id,
+      ASSUMPTION_TEMPLATE.replace('{resource_name}', rName).replace('{start_hhmm}', startHhmm),
+      'assumed', [startH, startM]);
   }
 
   if (c.status === 'infeasible') {
-    const line: ExplainLine = {
-      candidate_id: c.id,
-      text: `${rName} cannot be moved to ${toName}: ${c.eligibility.reasons.join(', ')}.`,
-      claim_class: 'derived',
-    };
-    lines.push(line);
+    // R_INFEASIBLE — sources: none.
+    pushLine(lines, 'R_INFEASIBLE', c.id,
+      `${rName} cannot be moved to ${toName}: ${c.eligibility.reasons.join(', ')}.`,
+      'derived', []);
     return lines;
   }
 
   if (c.delta && c.metrics) {
-    // R_DELTA
+    // R_DELTA — sources: delta.order_time_in_system_s,
+    // delta.orders_completed_in_window, delta.stations[to].queue_burden_s.
     const tis = c.delta.order_time_in_system_s;
     const tisText = tis < 0 ? `improves by ${-tis}s` : tis > 0 ? `worsens by ${tis}s` : 'unchanged';
     const qb = c.delta.stations[c.to]?.queue_burden_s ?? 0;
-    lines.push({
-      candidate_id: c.id,
-      text: `SIMULATED · Versus doing nothing: order time in system ${tisText}, ${c.delta.orders_completed_in_window} more orders completed, ${toName} queue burden ${fmtDeltaSeconds(qb)}.`,
-      claim_class: 'simulated',
-    });
+    const completed = c.delta.orders_completed_in_window;
+    pushLine(lines, 'R_DELTA', c.id,
+      `SIMULATED · Versus doing nothing: order time in system ${tisText}, ${completed} more orders completed, ${toName} queue burden ${fmtDeltaSeconds(qb)}.`,
+      'simulated', [tis, completed, qb]);
 
-    // R_OVERLOAD_END — iff both non-null and minutes_earlier >= 1.
+    // R_OVERLOAD_END — sources: minutes_earlier.
     const candLast = c.metrics.stations[c.to]?.overload_last_t ?? null;
     if (baselineOverloadLast != null && candLast != null) {
       const minutesEarlier = Math.floor((baselineOverloadLast - candLast) / 60);
       if (minutesEarlier >= 1) {
-        lines.push({
-          candidate_id: c.id,
-          text: `SIMULATED · ${toName} overload ends ${minutesEarlier} minutes earlier.`,
-          claim_class: 'simulated',
-        });
+        pushLine(lines, 'R_OVERLOAD_END', c.id,
+          `SIMULATED · ${toName} overload ends ${minutesEarlier} minutes earlier.`,
+          'simulated', [minutesEarlier]);
       }
     }
 
-    // R_TRADEOFF / R_NEW_OVERLOAD
+    // R_TRADEOFF / R_NEW_OVERLOAD — sources: baseline and scenario.
     for (const t of c.trade_offs) {
       const sName = entityName(world, t.station);
       if (t.metric === 'overload_s' && c.new_overload_stations.includes(t.station)) {
-        lines.push({
-          candidate_id: c.id,
-          text: `SIMULATED · New overload at ${sName} (${t.scenario}s).`,
-          claim_class: 'simulated',
-        });
+        pushLine(lines, 'R_NEW_OVERLOAD', c.id,
+          `SIMULATED · New overload at ${sName} (${t.scenario}s).`,
+          'simulated', [t.scenario]);
       } else {
         const metricText = t.metric === 'queue_burden_s' ? 'queue burden' : 'overload time';
-        lines.push({
-          candidate_id: c.id,
-          text: `SIMULATED · Trade-off: ${sName} ${metricText} rises from ${t.baseline} to ${t.scenario}.`,
-          claim_class: 'simulated',
-        });
+        pushLine(lines, 'R_TRADEOFF', c.id,
+          `SIMULATED · Trade-off: ${sName} ${metricText} rises from ${t.baseline} to ${t.scenario}.`,
+          'simulated', [t.baseline, t.scenario]);
       }
     }
 
-    // R_ECONOMICS — C3: rate per objective.
+    // R_ECONOMICS — sources: rate and by_value[key].net_effect.
     if (c.economics) {
       const valueKey = objective.id === 'economic' ? (objective.economic_value_key ?? 'base') : 'base';
-      const rate = valueKey === 'base'
-        ? c.economics.inputs.find((x) => x.name === 'delay_cost_per_order_minute')?.value ?? 0
-        : 0; // low/high from sensitivity values; simplified
+      // C3: rate for base is world value; low/high from sensitivity.
+      // effectiveRate is provided by explainSet from set.sensitivity.values.
+      const rate = effectiveRate
+        ?? c.economics.inputs.find((x) => x.name === 'delay_cost_per_order_minute')?.value
+        ?? 0;
       const net = c.economics.by_value[valueKey].net_effect;
       const netText = net >= 0 ? `+${net.toFixed(2)}` : net.toFixed(2);
-      lines.push({
-        candidate_id: c.id,
-        text: `ASSUMED · At ${rate} per order-minute over target, net effect ${netText} (delay cost only; no revenue is assumed).`,
-        claim_class: 'assumed',
-      });
+      pushLine(lines, 'R_ECONOMICS', c.id,
+        `ASSUMED · At ${rate} per order-minute over target, net effect ${netText} (delay cost only; no revenue is assumed).`,
+        'assumed', [rate, net]);
     }
 
-    // R_RANK — C3: four fixed variants.
+    // R_RANK — sources: rank.
     if (c.rank != null) {
       const isEconomic = objective.id === 'economic';
       const valueKey = objective.economic_value_key ?? 'base';
@@ -199,17 +218,13 @@ export function explainCandidate(
       } else {
         text = `Ranked ${c.rank} (conditional): largest net effect at the ${valueKey} rate among non-dominated candidates with new overloads.`;
       }
-      lines.push({
-        candidate_id: c.id,
-        text,
-        claim_class: isEconomic ? 'assumed' : 'simulated',
-      });
+      pushLine(lines, 'R_RANK', c.id, text,
+        isEconomic ? 'assumed' : 'simulated', [c.rank]);
     } else if (c.dominated_by.length > 0) {
-      lines.push({
-        candidate_id: c.id,
-        text: `Dominated by ${c.dominated_by.join(', ')}.`,
-        claim_class: 'simulated',
-      });
+      // R_DOMINATED — sources: none (ids are not numerals).
+      pushLine(lines, 'R_DOMINATED', c.id,
+        `Dominated by ${c.dominated_by.join(', ')}.`,
+        'simulated', []);
     }
   }
 
@@ -217,47 +232,26 @@ export function explainCandidate(
 }
 
 export function explainSet(world: World, set: RecommendationSet): ExplainLine[] {
-  const lines: ExplainLine[] = [];
+  const lines: TemplatedLine[] = [];
+  // C3: effective rate for R_ECONOMICS.
+  const valueKey = set.objective.id === 'economic' ? (set.objective.economic_value_key ?? 'base') : 'base';
+  const effectiveRate = set.sensitivity.values[valueKey as 'low' | 'base' | 'high'];
   for (const c of set.candidates) {
     const baselineLast = set.baseline.metrics.stations[c.to]?.overload_last_t ?? null;
-    lines.push(...explainCandidate(world, c, set.objective, baselineLast));
+    const cLines = explainCandidate(world, c, set.objective, baselineLast, effectiveRate) as TemplatedLine[];
+    lines.push(...cLines);
   }
   if (set.top.kind === 'no_action') {
     const reasonText = set.top.reason.replace(/_/g, ' ').toLowerCase();
-    lines.push({
-      candidate_id: null,
-      text: `No evaluated intervention is better than doing nothing (${reasonText}).`,
-      claim_class: set.top.claim_class,
-    });
+    // R_NO_ACTION — sources: none.
+    pushLine(lines, 'R_NO_ACTION', null,
+      `No evaluated intervention is better than doing nothing (${reasonText}).`,
+      set.top.claim_class, []);
   }
-  // R_AUTHORITY always last.
-  lines.push({
-    candidate_id: null,
-    text: 'Advisory only. ATLAS does not execute or authorise this change.',
-    claim_class: 'derived',
-  });
-
-  // Post-checks (C2, C4).
-  for (const l of lines) {
-    // Determine template for checks (simplified: by text prefix).
-    let template = 'UNKNOWN';
-    if (l.text.includes('→')) template = 'R_CANDIDATE';
-    else if (l.text.startsWith('ASSUMED · Observed state:')) template = 'R_ASSUMPTION';
-    else if (l.text.includes('Versus doing nothing')) template = 'R_DELTA';
-    else if (l.text.includes('overload ends')) template = 'R_OVERLOAD_END';
-    else if (l.text.includes('Trade-off:')) template = 'R_TRADEOFF';
-    else if (l.text.includes('New overload at')) template = 'R_NEW_OVERLOAD';
-    else if (l.text.includes('net effect')) template = 'R_ECONOMICS';
-    else if (l.text.startsWith('Ranked')) template = 'R_RANK';
-    else if (l.text.includes('cannot be moved')) template = 'R_INFEASIBLE';
-    else if (l.text.startsWith('Dominated by')) template = 'R_DOMINATED';
-    else if (l.text.startsWith('No evaluated intervention')) template = 'R_NO_ACTION';
-    else if (l.text.startsWith('Advisory only')) template = 'R_AUTHORITY';
-
-    checkForbidden(l, template);
-    // C4 numeral check (simplified sources; full per-template sources in production).
-    // For now, only enforce on lines where we can compute sources.
-  }
+  // R_AUTHORITY always last — sources: none.
+  pushLine(lines, 'R_AUTHORITY', null,
+    'Advisory only. ATLAS does not execute or authorise this change.',
+    'derived', []);
 
   return lines;
 }
