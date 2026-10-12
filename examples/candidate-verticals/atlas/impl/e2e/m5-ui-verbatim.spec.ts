@@ -60,7 +60,7 @@ test.describe('T-UI-VERBATIM with route interception', () => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 'INTERNAL', message: 'test error' }),
+        body: JSON.stringify({ error: { code: 'INTERNAL', message: 'test error' } }),
       });
     });
     await page.goto('http://127.0.0.1:8123/?register=observed&t=1791336000');

@@ -340,7 +340,7 @@ async function selectEntity(entityId: string): Promise<void> {
             // C6: horizon_t = min(t + 4200, range.max_t). 4200 is the frozen
             // M2 comparison-window length (presentation constant).
             // (Avoid Math.min: M3 forbids arithmetic tokens in the bundle.)
-            const rangeMax = (window as any).__atlasRangeMax ?? Infinity;
+            const rangeMax = currentFrame?.register.range.max_t ?? Infinity;
             const tPlus4200 = currentT + 4200;
             const horizonT = tPlus4200 < rangeMax ? tPlus4200 : rangeMax;
             const rRes = await fetch(`/api/recommendations?register=observed&t=${currentT}&horizon_t=${horizonT}&station=${encodeURIComponent(entityId)}`);
@@ -350,7 +350,7 @@ async function selectEntity(entityId: string): Promise<void> {
               const errData: any = await rRes.json().catch(() => ({}));
               const errMsg = document.createElement('p');
               errMsg.setAttribute('data-testid', 'recommendations-error');
-              errMsg.textContent = `Recommendations unavailable: ${errData.code ?? 'UNKNOWN'}`;
+              errMsg.textContent = `Recommendations unavailable: ${errData.error?.code ?? 'UNKNOWN'}`;
               recDiv.appendChild(errMsg);
               body.appendChild(recDiv);
             } else {
